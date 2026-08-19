@@ -611,9 +611,9 @@
       else if (data.cardNumber.replace(/\D/g, '').length !== 16) errors.push('카드번호 16자리를 모두 입력하세요.');
       if (!data.cardExpiry) errors.push('카드 유효기간을 선택하세요.');
     }
-    if (!data.productName?.trim()) errors.push('제품을 1개 이상 추가하세요.');
-    if (!data.contractTerm) errors.push('약정 기간을 선택하세요.');
-    if (!data.manageType) errors.push('관리 방식을 선택하세요.');
+    // 제품: productsJson 우선, 없으면 productName 폴백
+    const cartProducts = data.productsJson ? (() => { try { return JSON.parse(data.productsJson); } catch { return []; } })() : [];
+    if (cartProducts.length === 0 && !data.productName?.trim()) errors.push('제품을 1개 이상 추가하세요.');
     return errors;
   }
 
@@ -760,11 +760,22 @@
     }
     lines.push('');
     lines.push('🧺 [제품 정보]');
-    lines.push(`제품명: ${r.productName}`);
-    lines.push(`모델명: ${r.productModel}`);
-    lines.push(`약정기간: ${r.contractTerm}`);
-    lines.push(`관리방식: ${r.manageType}`);
-    if (r.rentalFee) lines.push(`월 렌탈료: ${formatFee(r.rentalFee)}`);
+    // 다중 제품 지원
+    const products = r.productsJson ? (() => { try { return JSON.parse(r.productsJson); } catch { return []; } })() : [];
+    if (products.length > 1) {
+      products.forEach((p, i) => {
+        lines.push(`[${i + 1}] ${p.title} (${p.model || ''})`);
+        lines.push(`    ${p.contractTerm} / ${p.manageType} / ${Number(p.rentalFee).toLocaleString()}원${p.promo ? ' / 🎁' + p.promo : ''}`);
+      });
+      const total = products.reduce((s, p) => s + (Number(p.rentalFee) || 0), 0);
+      lines.push(`합계 월 렌탈료: ${total.toLocaleString()}원`);
+    } else {
+      lines.push(`제품명: ${r.productName}`);
+      lines.push(`모델명: ${r.productModel}`);
+      lines.push(`약정기간: ${r.contractTerm}`);
+      lines.push(`관리방식: ${r.manageType}`);
+      if (r.rentalFee) lines.push(`월 렌탈료: ${formatFee(r.rentalFee)}`);
+    }
     if (r.otherDiscount?.trim()) lines.push(`기타할인/비고: ${r.otherDiscount.trim()}`);
     lines.push('');
     lines.push('──────────────');
@@ -945,14 +956,35 @@
       </div>
       <div class="detail-section">
         <h4>🧺 제품 정보</h4>
-        <div class="detail-grid">
-          <div class="d-label">제품명</div><div class="d-value">${escapeHtml(r.productName)}</div>
-          <div class="d-label">모델명</div><div class="d-value">${escapeHtml(r.productModel)}</div>
-          <div class="d-label">약정기간</div><div class="d-value">${escapeHtml(r.contractTerm || '')}</div>
-          <div class="d-label">관리방식</div><div class="d-value">${escapeHtml(r.manageType || '')}</div>
-          <div class="d-label">월 렌탈료</div><div class="d-value">${escapeHtml(formatFee(r.rentalFee))}</div>
-          <div class="d-label">기타 할인/비고</div><div class="d-value">${escapeHtml(r.otherDiscount || '-').replace(/\n/g, '<br>')}</div>
-        </div>
+        ${(() => {
+          const products = r.productsJson ? (() => { try { return JSON.parse(r.productsJson); } catch { return []; } })() : [];
+          if (products.length > 1) {
+            const total = products.reduce((s, p) => s + (Number(p.rentalFee) || 0), 0);
+            return `<div class="multi-product-list">
+              ${products.map((p, i) => `
+                <div class="multi-product-item">
+                  <span class="multi-product-num">${i + 1}</span>
+                  <div class="multi-product-info">
+                    <div class="multi-product-title">${escapeHtml(p.title)} <small>${escapeHtml(p.model || '')}</small></div>
+                    <div class="multi-product-meta">${escapeHtml(p.contractTerm)} · ${escapeHtml(p.manageType)} · <strong>${Number(p.rentalFee).toLocaleString()}원</strong>${p.promo ? ' · 🎁 ' + escapeHtml(p.promo) : ''}</div>
+                  </div>
+                </div>`).join('')}
+              <div class="multi-product-total">합계 월 렌탈료: <strong>${total.toLocaleString()}원</strong></div>
+            </div>
+            <div class="detail-grid">
+              <div class="d-label">기타 할인/비고</div><div class="d-value">${escapeHtml(r.otherDiscount || '-').replace(/\n/g, '<br>')}</div>
+            </div>`;
+          } else {
+            return `<div class="detail-grid">
+              <div class="d-label">제품명</div><div class="d-value">${escapeHtml(r.productName)}</div>
+              <div class="d-label">모델명</div><div class="d-value">${escapeHtml(r.productModel)}</div>
+              <div class="d-label">약정기간</div><div class="d-value">${escapeHtml(r.contractTerm || '')}</div>
+              <div class="d-label">관리방식</div><div class="d-value">${escapeHtml(r.manageType || '')}</div>
+              <div class="d-label">월 렌탈료</div><div class="d-value">${escapeHtml(formatFee(r.rentalFee))}</div>
+              <div class="d-label">기타 할인/비고</div><div class="d-value">${escapeHtml(r.otherDiscount || '-').replace(/\n/g, '<br>')}</div>
+            </div>`;
+          }
+        })()}
       </div>
       <div class="detail-section">
         <h4>📋 접수 메타</h4>
@@ -1275,6 +1307,13 @@
     if (!list || !wrap) return;
     if (productCart.length === 0) {
       wrap.style.display = 'none';
+      // hidden 필드 초기화
+      $('#productName').value = '';
+      $('#productModel').value = '';
+      $('#contractTerm').value = '';
+      $('#manageType').value = '';
+      $('#rentalFee').value = '';
+      $('#productsJson').value = '';
       return;
     }
     wrap.style.display = 'block';
@@ -1286,13 +1325,13 @@
         </div>
         <button type="button" class="btn-cart-remove" onclick="window._removeCartItem(${i})">✕</button>
       </li>`).join('');
-    // hidden 필드에 첫 번째 제품 기준으로 저장
+    // hidden 필드: 첫 번째 제품 기준 + 전체 JSON
     const first = productCart[0];
     $('#productName').value = first.title;
     $('#productModel').value = first.model || '';
-    $('#contractTerm').value = (first.contractTerm.match(/^(\d+)년/) || [])[1] ? first.contractTerm.match(/^(\d+)년/)[1] + '년' : first.contractTerm;
-    $('#manageType').value = first.manageType;
-    $('#rentalFee').value = first.rentalFee;
+    $('#contractTerm').value = first.contractTerm || '';
+    $('#manageType').value = first.manageType || '';
+    $('#rentalFee').value = first.rentalFee || '';
     $('#productsJson').value = JSON.stringify(productCart);
   }
 

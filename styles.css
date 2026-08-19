@@ -921,3 +921,54 @@ body {
   transition: all 0.15s;
 }
 .btn-cart-remove:hover { background: #fef2f2; }
+
+/* ===== 다중 제품 상세 표시 ===== */
+.multi-product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.multi-product-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #f8f9ff;
+  border: 1.5px solid #dde4fb;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.multi-product-num {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #1a56db;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.multi-product-info { flex: 1; }
+.multi-product-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1d27;
+}
+.multi-product-title small { font-weight: 400; color: #6b7280; margin-left: 4px; }
+.multi-product-meta {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 3px;
+}
+.multi-product-total {
+  text-align: right;
+  font-size: 13px;
+  color: #374151;
+  padding: 6px 4px 2px;
+  border-top: 1px solid #e8eaf0;
+  margin-top: 4px;
+}

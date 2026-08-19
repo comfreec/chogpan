@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>코웨이 렌탈 접수 관리</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
-<link rel="stylesheet" href="styles.css?v=20260824">
+<link rel="stylesheet" href="styles.css?v=20260826">
 </head>
 <body>
 
@@ -280,16 +280,6 @@
       </div>
     </div>
 
-    <div class="form-card">
-      <h2>⚙️ 데이터 관리</h2>
-      <div class="form-actions">
-        <button type="button" class="btn btn-outline" id="exportJsonBtn">📥 JSON 내보내기</button>
-        <button type="button" class="btn btn-outline" id="importJsonBtn">📤 JSON 가져오기</button>
-        <input type="file" id="importFile" accept=".json" style="display:none;">
-        <button type="button" class="btn btn-danger" id="clearAllBtn">🗑️ 전체 삭제</button>
-      </div>
-      <p class="help-text mt-10">JSON 내보내기로 정기 백업을 권장합니다. 전체 삭제는 Firestore DB에서 영구 삭제됩니다.</p>
-    </div>
   </section>
   <!-- 설정 탭 -->
   <section id="tab-settings" class="tab-content">
@@ -356,6 +346,17 @@
       <ul id="managerList" class="manager-list">
         <li class="manager-empty">등록된 담당자가 없습니다.</li>
       </ul>
+    </div>
+
+    <div class="form-card mt-20">
+      <h2>⚙️ 데이터 관리</h2>
+      <p class="help-text">JSON으로 백업하거나 다른 기기에서 가져올 수 있습니다. 전체 삭제는 복구 불가합니다.</p>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" id="exportJsonBtn">📥 JSON 내보내기</button>
+        <button type="button" class="btn btn-outline" id="importJsonBtn">📤 JSON 가져오기</button>
+        <input type="file" id="importFile" accept=".json" style="display:none;">
+        <button type="button" class="btn btn-danger" id="clearAllBtn">🗑️ 전체 삭제</button>
+      </div>
     </div>
   </section>
 
@@ -502,7 +503,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="products-data.js?v=20260824"></script>
-<script src="app.js?v=20260824"></script>
+<script src="products-data.js?v=20260826"></script>
+<script src="app.js?v=20260826"></script>
 </body>
 </html>

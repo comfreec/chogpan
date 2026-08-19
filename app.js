@@ -18,12 +18,13 @@
   // state.paymentInfos = [{ id, managerName, phone, ssn, bank, account }, ...]
 
   function buildPayRequestText(r) {
-    // 접수의 담당자 이름으로 입금요청 정보 조회
     const managerName = r.managerName || '';
     const info = (state.paymentInfos || []).find((p) => p.managerName === managerName)
       || (state.paymentInfos || [])[0]
       || {};
     const lines = [];
+    lines.push('📋 코웨이 렌탈 접수');
+    lines.push('');
     lines.push(`☞ ${r.customerName}고객님 건 입금요청 드립니다.`);
     lines.push('');
     if (info.managerName) lines.push(`성함: ${info.managerName}`);
@@ -625,6 +626,25 @@
       e.target.value = formatCard(e.target.value);
     });
 
+    // 성함 입력 시 예금주/카드소유주 자동 입력
+    $('#customerName').addEventListener('input', (e) => {
+      const name = e.target.value;
+      const holder = $('#accountHolder');
+      const cardHolder = $('#cardHolder');
+      // 성함 변경 시 항상 덮어씀 (수동 플래그 초기화)
+      if (holder) { holder.value = name; holder.dataset.manualEdit = ''; }
+      if (cardHolder) { cardHolder.value = name; cardHolder.dataset.manualEdit = ''; }
+    });
+    // 수동 입력 시 자동입력 중단 플래그
+    $('#accountHolder').addEventListener('input', (e) => {
+      const customerName = $('#customerName').value;
+      e.target.dataset.manualEdit = e.target.value !== customerName ? '1' : '';
+    });
+    $('#cardHolder').addEventListener('input', (e) => {
+      const customerName = $('#customerName').value;
+      e.target.dataset.manualEdit = e.target.value !== customerName ? '1' : '';
+    });
+
     // 통신사 라디오 + 알뜰폰 체크박스 연동
     function updateTelecomValue() {
       const mvno = $('#telecomMvno');
@@ -743,7 +763,11 @@
     lines.push('👤 [고객 정보]');
     lines.push(`성함: ${r.customerName}`);
     lines.push(`핸드폰: ${r.customerPhone}${r.telecom ? ' (' + r.telecom + ')' : ''}`);
-    lines.push(`생년월일/성별: ${formatBirthday(r.birthDate)} / ${r.gender}`);
+    // 생년월일 6자리 + 성별코드 (남자=1, 여자=2)
+    const bdRaw = String(r.birthDate || '').replace(/\D/g, '');
+    const bd6 = bdRaw.length >= 8 ? bdRaw.slice(2, 8) : bdRaw.slice(0, 6);
+    const genderCode = r.gender === '여자' ? '2' : '1';
+    lines.push(`주민번호앞자리: ${bd6}-${genderCode}`);
     lines.push(`설치주소: ${r.installAddress}`);
     lines.push('');
     lines.push('💳 [결제 정보]');
@@ -764,10 +788,12 @@
     const products = r.productsJson ? (() => { try { return JSON.parse(r.productsJson); } catch { return []; } })() : [];
     if (products.length > 1) {
       products.forEach((p, i) => {
+        if (i > 0) lines.push('');
         lines.push(`[${i + 1}] ${p.title} (${p.model || ''})`);
         lines.push(`    ${p.contractTerm} / ${p.manageType} / ${Number(p.rentalFee).toLocaleString()}원${p.promo ? ' / 🎁' + p.promo : ''}`);
       });
       const total = products.reduce((s, p) => s + (Number(p.rentalFee) || 0), 0);
+      lines.push('');
       lines.push(`합계 월 렌탈료: ${total.toLocaleString()}원`);
     } else {
       lines.push(`제품명: ${r.productName}`);
@@ -803,7 +829,7 @@
   async function shareViaKakao(text) {
     if (navigator.share) {
       try {
-        await navigator.share({ title: '코웨이 렌탈 접수', text });
+        await navigator.share({ text });
         return true;
       } catch (e) {
         if (e && e.name === 'AbortError') return false;
@@ -1925,7 +1951,6 @@
     const ok = initFirebase();
     if (ok) {
       startRealtimeSync();
-      showToast('Firestore 연결됨', 'success', 2000);
     } else {
       showToast('Firestore 미연결 — 로컬 저장 모드', 'info', 3000);
     }

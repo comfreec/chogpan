@@ -624,6 +624,33 @@
     $('#cardNumber').addEventListener('input', (e) => {
       e.target.value = formatCard(e.target.value);
     });
+
+    // 통신사 라디오 + 알뜰폰 체크박스 연동
+    function updateTelecomValue() {
+      const mvno = $('#telecomMvno');
+      const checked = $$('input[name="telecomCarrier"]').find((r) => r.checked);
+      const hiddenVal = $('#telecomValue');
+      if (!hiddenVal) return;
+      const carrier = checked ? checked.value : '';
+      const isMvno = mvno && mvno.checked;
+      // 안내 문구 표시
+      const note = $('#telecomMvnoNote');
+      if (note) note.style.display = isMvno ? 'block' : 'none';
+      if (carrier && isMvno) {
+        hiddenVal.value = carrier + ' 알뜰폰';
+      } else if (carrier) {
+        hiddenVal.value = carrier;
+      } else if (isMvno) {
+        hiddenVal.value = '알뜰폰';
+      } else {
+        hiddenVal.value = '';
+      }
+    }
+    $$('input[name="telecomCarrier"]').forEach((radio) => {
+      radio.addEventListener('change', updateTelecomValue);
+    });
+    $('#telecomMvno')?.addEventListener('change', updateTelecomValue);
+
     $$('input[name="payMethod"]').forEach((radio) => {
       radio.addEventListener('change', (e) => {
         const val = e.target.value;
@@ -643,6 +670,10 @@
       $('#rentalForm').reset();
       $('#accountFields').style.display = 'none';
       $('#cardFields').style.display = 'none';
+      if ($('#telecomValue')) $('#telecomValue').value = '';
+      if ($('#telecomMvno')) $('#telecomMvno').checked = false;
+      const note = $('#telecomMvnoNote');
+      if (note) note.style.display = 'none';
       // 제품 검색 초기화
       const si = $('#productSearchInput');
       if (si) si.value = '';
@@ -671,6 +702,10 @@
         $('#rentalForm').reset();
         $('#accountFields').style.display = 'none';
         $('#cardFields').style.display = 'none';
+        if ($('#telecomValue')) $('#telecomValue').value = '';
+        if ($('#telecomMvno')) $('#telecomMvno').checked = false;
+        const noteEl = $('#telecomMvnoNote');
+        if (noteEl) noteEl.style.display = 'none';
         clearProductDetail();
         const where = state.fbEnabled ? 'Firestore DB + 로컬 저장 완료 ✅' : '로컬에만 저장됨 (Firebase 미연결)';
         showFormMsg(`✅ 접수가 저장되었습니다.<br>${where}`, 'success');
@@ -707,7 +742,7 @@
     lines.push('──────────────');
     lines.push('👤 [고객 정보]');
     lines.push(`성함: ${r.customerName}`);
-    lines.push(`핸드폰: ${r.customerPhone}`);
+    lines.push(`핸드폰: ${r.customerPhone}${r.telecom ? ' (' + r.telecom + ')' : ''}`);
     lines.push(`생년월일/성별: ${formatBirthday(r.birthDate)} / ${r.gender}`);
     lines.push(`설치주소: ${r.installAddress}`);
     lines.push('');
@@ -898,6 +933,7 @@
           <div class="d-label">담당자</div><div class="d-value">${escapeHtml(r.managerName || '-')}</div>
           <div class="d-label">성함</div><div class="d-value">${escapeHtml(r.customerName)}</div>
           <div class="d-label">핸드폰</div><div class="d-value">${escapeHtml(r.customerPhone)}</div>
+          ${r.telecom ? `<div class="d-label">통신사</div><div class="d-value">${escapeHtml(r.telecom)}</div>` : ''}
           <div class="d-label">생년월일</div><div class="d-value">${escapeHtml(formatBirthday(r.birthDate))}</div>
           <div class="d-label">성별</div><div class="d-value">${escapeHtml(r.gender || '')}</div>
           <div class="d-label">설치주소</div><div class="d-value">${escapeHtml(r.installAddress || '')}</div>
@@ -1037,14 +1073,7 @@
         <div class="stat-bars">${categoryRows}</div>
       </div>`;
 
-    const statusEl = $('#dbConnectionStatus');
-    if (statusEl) {
-      statusEl.className = 'form-msg ' + (state.fbEnabled ? 'success' : 'error');
-      statusEl.textContent = state.fbEnabled
-        ? `✅ Firestore 실시간 연결 중 (프로젝트: chogpan-oda)`
-        : '❌ Firestore 미연결 — 로컬스토리지에만 저장됩니다.';
-      statusEl.style.display = 'block';
-    }
+    // dbConnectionStatus 제거됨 (HTML에서 삭제)
   }
 
   function renderDbTable() {
@@ -1093,15 +1122,15 @@
       return;
     }
     tbody.innerHTML = list.map((r, i) => `
-      <tr>
-        <td>${i + 1}</td>
-        <td>${escapeHtml(r.managerName || '-')}</td>
-        <td><strong>${escapeHtml(r.customerName)}</strong></td>
-        <td>${escapeHtml(r.customerPhone)}</td>
-        <td>${escapeHtml(r.productName)}<br><small style="color:#6b7280">${escapeHtml(r.productModel)}</small></td>
-        <td><span class="badge ${r.payMethod === '신용카드' ? 'badge-card' : 'badge-account'}">${escapeHtml(r.payMethod)}</span></td>
-        <td>${r.rentalFee ? formatFee(r.rentalFee) : '-'}</td>
-        <td>
+      <tr class="db-row" onclick="window._viewRecord('${r.id}')">
+        <td data-label="#">${i + 1}</td>
+        <td data-label="담당자">${escapeHtml(r.managerName || '-')}</td>
+        <td data-label="성함"><strong>${escapeHtml(r.customerName)}</strong></td>
+        <td data-label="핸드폰">${escapeHtml(r.customerPhone)}</td>
+        <td data-label="제품">${escapeHtml(r.productName)}<br><small style="color:#6b7280">${escapeHtml(r.productModel)}</small></td>
+        <td data-label="결제"><span class="badge ${r.payMethod === '신용카드' ? 'badge-card' : 'badge-account'}">${escapeHtml(r.payMethod)}</span></td>
+        <td data-label="렌탈료">${r.rentalFee ? formatFee(r.rentalFee) : '-'}</td>
+        <td data-label="관리" onclick="event.stopPropagation()">
           <div style="display:flex;gap:6px;justify-content:center;">
             <button class="btn btn-sm btn-outline" onclick="window._viewRecord('${r.id}')">상세</button>
             <button class="btn btn-sm btn-danger" onclick="window._deleteFromDb('${r.id}','${escapeHtml(r.customerName)}')">삭제</button>
@@ -1467,6 +1496,14 @@
     // 필드 채우기
     $('#edit_customerName').value = r.customerName || '';
     $('#edit_customerPhone').value = r.customerPhone || '';
+    // 통신사 파싱: "SKT 알뜰폰" → carrier=SKT, mvno=true
+    const telecomVal = r.telecom || '';
+    const isMvno = telecomVal.includes('알뜰폰');
+    const carrier = telecomVal.replace(' 알뜰폰', '').trim();
+    $$('input[name="edit_telecomCarrier"]').forEach((el) => { el.checked = el.value === carrier; });
+    const editMvno = $('#edit_telecomMvno');
+    if (editMvno) editMvno.checked = isMvno;
+    $('#edit_telecom').value = telecomVal;
     $('#edit_birthDate').value = r.birthDate || '';
     document.querySelectorAll('input[name="edit_gender"]').forEach((el) => {
       el.checked = el.value === r.gender;
@@ -1515,6 +1552,22 @@
       if (e.key === 'Escape' && $('#editModal').style.display === 'flex') closeEdit();
     });
 
+    // 수정 모달 통신사 연동
+    function updateEditTelecom() {
+      const checked = $$('input[name="edit_telecomCarrier"]').find((r) => r.checked);
+      const mvno = $('#edit_telecomMvno');
+      const hidden = $('#edit_telecom');
+      if (!hidden) return;
+      const carrier = checked ? checked.value : '';
+      const isMvno = mvno && mvno.checked;
+      if (carrier && isMvno) hidden.value = carrier + ' 알뜰폰';
+      else if (carrier) hidden.value = carrier;
+      else if (isMvno) hidden.value = '알뜰폰';
+      else hidden.value = '';
+    }
+    $$('input[name="edit_telecomCarrier"]').forEach((r) => r.addEventListener('change', updateEditTelecom));
+    $('#edit_telecomMvno')?.addEventListener('change', updateEditTelecom);
+
     // 결제방식 라디오 변경
     document.querySelectorAll('input[name="edit_payMethod"]').forEach((el) => {
       el.addEventListener('change', (e) => {
@@ -1537,6 +1590,7 @@
       const updates = {
         customerName: $('#edit_customerName').value.trim(),
         customerPhone: $('#edit_customerPhone').value.trim(),
+        telecom: $('#edit_telecom').value,
         birthDate: $('#edit_birthDate').value,
         gender,
         installAddress: $('#edit_installAddress').value.trim(),
@@ -1717,7 +1771,15 @@
 
   // ===== Tabs =====
   const SETTINGS_PW = 'comfreec';
+  const SETTINGS_PW_KEY = 'chogpan_settings_auth';
   let settingsUnlocked = false;
+
+  function isSettingsAuthed() {
+    return localStorage.getItem(SETTINGS_PW_KEY) === '1';
+  }
+  function saveSettingsAuth() {
+    localStorage.setItem(SETTINGS_PW_KEY, '1');
+  }
 
   function bindTabs() {
     $$('.tab-btn').forEach((btn) => {
@@ -1726,13 +1788,19 @@
 
         // 설정 탭 비밀번호 확인
         if (tab === 'settings' && !settingsUnlocked) {
-          const pw = prompt('설정 비밀번호를 입력하세요.');
-          if (pw === null) return; // 취소
-          if (pw !== SETTINGS_PW) {
-            showToast('비밀번호가 틀렸습니다.', 'error');
-            return;
+          if (isSettingsAuthed()) {
+            // 이미 인증된 기기 → 바로 통과
+            settingsUnlocked = true;
+          } else {
+            const pw = prompt('설정 비밀번호를 입력하세요.');
+            if (pw === null) return;
+            if (pw !== SETTINGS_PW) {
+              showToast('비밀번호가 틀렸습니다.', 'error');
+              return;
+            }
+            settingsUnlocked = true;
+            saveSettingsAuth();
           }
-          settingsUnlocked = true;
         }
 
         $$('.tab-btn').forEach((b) => b.classList.toggle('active', b === btn));

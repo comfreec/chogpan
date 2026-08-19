@@ -177,7 +177,7 @@ body {
 .form-group textarea { resize: vertical; min-height: 80px; }
 
 /* ===== Radio Group ===== */
-.radio-group { display: flex; gap: 16px; padding: 4px 0; flex-wrap: wrap; }
+.radio-group { display: flex; gap: 8px; padding: 4px 0; flex-wrap: wrap; }
 .radio-item {
   display: inline-flex;
   align-items: center;
@@ -198,6 +198,15 @@ body {
   font-weight: 600;
 }
 .radio-item input { accent-color: #1a56db; cursor: pointer; }
+
+/* 알뜰폰 체크박스 */
+.telecom-mvno-label:has(input:checked) {
+  border-color: #f59e0b;
+  background: #fffbeb;
+  color: #b45309;
+  font-weight: 600;
+}
+.telecom-wrap { margin-top: 2px; }
 
 /* ===== Pay Fields ===== */
 .pay-fields {
@@ -643,8 +652,60 @@ body {
   color: #1a1d27;
 }
 .db-table tbody tr:last-child td { border-bottom: none; }
-.db-table tbody tr:hover { background: #fafbff; }
+.db-table tbody tr:hover { background: #fafbff; cursor: pointer; }
+.db-row { transition: background 0.12s; }
 .btn-sm { padding: 5px 11px; font-size: 12px; }
+
+/* ===== 모바일 테이블 카드형 ===== */
+@media (max-width: 640px) {
+  .table-wrap {
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+  .db-table thead { display: none; }
+  .db-table, .db-table tbody, .db-table tr, .db-table td {
+    display: block;
+    width: 100%;
+  }
+  .db-table tbody tr {
+    background: #fff;
+    border: 1.5px solid #e8eaf0;
+    border-radius: 14px;
+    margin-bottom: 10px;
+    padding: 12px 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    cursor: pointer;
+  }
+  .db-table tbody tr:hover { background: #fafbff; }
+  .db-table td {
+    padding: 4px 0;
+    border-bottom: none;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .db-table td[data-label="#"] { display: none; }
+  .db-table td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 700;
+    color: #9ca3af;
+    min-width: 48px;
+    flex-shrink: 0;
+    padding-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+  .db-table td[data-label="관리"] {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #f3f4f6;
+  }
+  .db-table td[data-label="관리"]::before { content: ''; min-width: 0; }
+  .db-table td[data-label="관리"] div { width: 100%; justify-content: flex-end; }
+}
 
 /* ===== 담당자 관리 ===== */
 .manager-add-row {

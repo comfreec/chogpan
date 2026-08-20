@@ -922,6 +922,31 @@ body {
 }
 .btn-cart-remove:hover { background: #fef2f2; }
 
+/* fee133 수수료 배지 (나만 보는 정보) */
+.fee133-badge {
+  display: inline-block;
+  font-size: 10px;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  padding: 1px 5px;
+  margin-left: 4px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.badge-fee133 {
+  font-size: 10px;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 /* ===== 다중 제품 상세 표시 ===== */
 .multi-product-list {
   display: flex;

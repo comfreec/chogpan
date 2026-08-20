@@ -986,16 +986,17 @@
           const products = r.productsJson ? (() => { try { return JSON.parse(r.productsJson); } catch { return []; } })() : [];
           if (products.length > 1) {
             const total = products.reduce((s, p) => s + (Number(p.rentalFee) || 0), 0);
+            const totalFee133 = products.reduce((s, p) => s + (Number(p.fee133) || 0), 0);
             return `<div class="multi-product-list">
               ${products.map((p, i) => `
                 <div class="multi-product-item">
                   <span class="multi-product-num">${i + 1}</span>
                   <div class="multi-product-info">
                     <div class="multi-product-title">${escapeHtml(p.title)} <small>${escapeHtml(p.model || '')}</small></div>
-                    <div class="multi-product-meta">${escapeHtml(p.contractTerm)} · ${escapeHtml(p.manageType)} · <strong>${Number(p.rentalFee).toLocaleString()}원</strong>${p.promo ? ' · 🎁 ' + escapeHtml(p.promo) : ''}</div>
+                    <div class="multi-product-meta">${escapeHtml(p.contractTerm)} · ${escapeHtml(p.manageType)} · <strong>${Number(p.rentalFee).toLocaleString()}원</strong>${p.promo ? ' · 🎁 ' + escapeHtml(p.promo) : ''}${p.fee133 ? ' <span class="fee133-badge">💰 ' + Number(p.fee133).toLocaleString() + '</span>' : ''}</div>
                   </div>
                 </div>`).join('')}
-              <div class="multi-product-total">합계 월 렌탈료: <strong>${total.toLocaleString()}원</strong></div>
+              <div class="multi-product-total">합계 월 렌탈료: <strong>${total.toLocaleString()}원</strong>${totalFee133 ? ' <span class="fee133-badge">💰 ' + totalFee133.toLocaleString() + '</span>' : ''}</div>
             </div>
             <div class="detail-grid">
               <div class="d-label">기타 할인/비고</div><div class="d-value">${escapeHtml(r.otherDiscount || '-').replace(/\n/g, '<br>')}</div>
@@ -1006,18 +1007,17 @@
               <div class="d-label">모델명</div><div class="d-value">${escapeHtml(r.productModel)}</div>
               <div class="d-label">약정기간</div><div class="d-value">${escapeHtml(r.contractTerm || '')}</div>
               <div class="d-label">관리방식</div><div class="d-value">${escapeHtml(r.manageType || '')}</div>
-              <div class="d-label">월 렌탈료</div><div class="d-value">${escapeHtml(formatFee(r.rentalFee))}</div>
+              <div class="d-label">월 렌탈료</div><div class="d-value">${escapeHtml(formatFee(r.rentalFee))}${(products[0]?.fee133 || r.fee133) ? ' <span class="fee133-badge">💰 ' + Number(products[0]?.fee133 || r.fee133).toLocaleString() + '</span>' : ''}</div>
               <div class="d-label">기타 할인/비고</div><div class="d-value">${escapeHtml(r.otherDiscount || '-').replace(/\n/g, '<br>')}</div>
             </div>`;
           }
         })()}
       </div>
       <div class="detail-section">
-        <h4>📋 접수 메타</h4>
+        <h4>📋 접수</h4>
         <div class="detail-grid">
-          <div class="d-label">접수 ID</div><div class="d-value" style="font-size:11px;color:#6b7280">${escapeHtml(r.id)}</div>
+          <div class="d-label">담당자</div><div class="d-value">${escapeHtml(r.managerName || '-')}</div>
           <div class="d-label">접수일시</div><div class="d-value">${escapeHtml(formatDate(r.createdAt))}</div>
-          <div class="d-label">저장 위치</div><div class="d-value">${state.fbEnabled ? '✅ Firestore DB' : '⚠️ 로컬스토리지'}</div>
         </div>
       </div>`;
     $('#detailModal').style.display = 'flex';
@@ -1347,7 +1347,7 @@
       <li class="cart-item">
         <div class="cart-item-info">
           <span class="cart-item-title">${escapeHtml(item.title)}</span>
-          <span class="cart-item-sub">${escapeHtml(item.model)} · ${escapeHtml(item.manageType)} · ${escapeHtml(item.contractTerm)} · ${Number(item.rentalFee).toLocaleString()}원${item.promo ? ' · 🎁 ' + escapeHtml(item.promo) : ''}</span>
+          <span class="cart-item-sub">${escapeHtml(item.model)} · ${escapeHtml(item.manageType)} · ${escapeHtml(item.contractTerm)} · ${Number(item.rentalFee).toLocaleString()}원${item.promo ? ' · 🎁 ' + escapeHtml(item.promo) : ''}${item.fee133 ? ' <span class="fee133-badge">💰 ' + Number(item.fee133).toLocaleString() + '</span>' : ''}</span>
         </div>
         <button type="button" class="btn-cart-remove" onclick="window._removeCartItem(${i})">✕</button>
       </li>`).join('');
@@ -1522,6 +1522,14 @@
     let text = `${item.title}  ${item.model}  |  ${item.manageType}  |  ${item.contractTerm}  |  ${Number(item.rentalFee).toLocaleString()}원`;
     if (item.promo && item.promo.trim()) text += `  |  🎁 ${item.promo}`;
     info.textContent = text;
+    // fee133 살짝 표시 (나만 보는 수수료)
+    let feeEl = badge.querySelector('.badge-fee133');
+    if (!feeEl) {
+      feeEl = document.createElement('span');
+      feeEl.className = 'badge-fee133';
+      badge.appendChild(feeEl);
+    }
+    feeEl.textContent = item.fee133 ? `💰 ${Number(item.fee133).toLocaleString()}` : '';
     badge.style.display = 'flex';
   }
 

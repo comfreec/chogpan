@@ -727,12 +727,16 @@
         const noteEl = $('#telecomMvnoNote');
         if (noteEl) noteEl.style.display = 'none';
         clearProductDetail();
-        const where = state.fbEnabled ? 'Firestore DB + 로컬 저장 완료 ✅' : '로컬에만 저장됨 (Firebase 미연결)';
-        showFormMsg(`✅ 접수가 저장되었습니다.<br>${where}`, 'success');
+        const where = '';
+        showFormMsg(`✅ 접수가 저장되었습니다.<br><button type="button" class="btn btn-kakao" id="afterSaveKakaoBtn" style="margin-top:10px;">📨 카톡으로 공유하기</button>`, 'success');
         showToast('저장되었습니다!', 'success');
-        if (confirm('저장된 내용을 카카오톡으로 보낼까요?')) {
-          const text = buildKakaoText(rec, { includeSensitive: true });
-          await shareViaKakao(text);
+        // 저장 후 카톡 버튼 바인딩
+        const kakaoBtn = $('#afterSaveKakaoBtn');
+        if (kakaoBtn) {
+          const savedText = buildKakaoText(rec, { includeSensitive: true });
+          kakaoBtn.addEventListener('click', async () => {
+            await shareViaKakao(savedText);
+          });
         }
       } catch (err) {
         console.error(err);
@@ -892,22 +896,26 @@
       return;
     }
     container.innerHTML = list.map((r) => {
-      const payBadge = r.payMethod === '신용카드' ? 'badge-card' : 'badge-account';
       const fee = r.rentalFee ? formatFee(r.rentalFee) : '-';
       return `
         <div class="record-card" data-id="${r.id}">
           <div class="record-head">
             <div>
               <span class="record-title">${escapeHtml(r.customerName)} · ${escapeHtml(r.customerPhone)}</span>
-              <span class="badge ${payBadge}">${escapeHtml(r.payMethod)}</span>
               ${r.managerName ? `<span class="badge badge-manager">👤 ${escapeHtml(r.managerName)}</span>` : ''}
             </div>
             <span class="record-date">${formatDate(r.createdAt)}</span>
           </div>
           <div class="record-meta">
-            <div><span>제품</span>${escapeHtml(r.productName)} (${escapeHtml(r.productModel)})</div>
-            <div><span>약정/관리</span>${escapeHtml(r.contractTerm)} / ${escapeHtml(r.manageType)}</div>
-            <div><span>월 렌탈료</span>${fee}</div>
+            ${(() => {
+              const prods = r.productsJson ? (() => { try { return JSON.parse(r.productsJson); } catch { return []; } })() : [];
+              if (prods.length > 1) {
+                return prods.map((p) => `<div><span>제품</span>${escapeHtml(p.title)} (${escapeHtml(p.model)}) · ${escapeHtml(p.contractTerm)} · ${Number(p.rentalFee).toLocaleString()}원</div>`).join('');
+              }
+              return `<div><span>제품</span>${escapeHtml(r.productName)} (${escapeHtml(r.productModel)})</div>
+                      <div><span>약정/관리</span>${escapeHtml(r.contractTerm)} / ${escapeHtml(r.manageType)}</div>
+                      <div><span>월 렌탈료</span>${fee}</div>`;
+            })()}
             <div><span>주소</span>${escapeHtml(r.installAddress || '')}</div>
           </div>
         </div>`;
@@ -926,12 +934,19 @@
     });
     const sorted = [...months].sort().reverse();
     const current = sel.value;
-    sel.innerHTML = '<option value="">전체 월</option>' +
+    const now = new Date();
+    const thisYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    sel.innerHTML = '<option value="">전체</option>' +
       sorted.map((m) => {
         const [y, mo] = m.split('-');
         return `<option value="${m}">${y}년 ${parseInt(mo, 10)}월</option>`;
       }).join('');
-    if (current && months.has(current)) sel.value = current;
+    if (current && months.has(current)) {
+      sel.value = current;
+    } else if (months.has(thisYM)) {
+      sel.value = thisYM;
+      state.monthFilter = thisYM;
+    }
   }
 
   // 담당자 필터 옵션 갱신 (접수 목록 탭)
@@ -1053,6 +1068,17 @@
     });
     const thisMonthCount = thisMonthRecs.length;
     const lastMonthCount = lastMonthRecs.length;
+
+    // 제품 대수 계산
+    function countProducts(recs) {
+      return recs.reduce((sum, r) => {
+        const prods = r.productsJson ? (() => { try { return JSON.parse(r.productsJson); } catch { return []; } })() : [];
+        return sum + (prods.length > 0 ? prods.length : 1);
+      }, 0);
+    }
+    const thisMonthProducts = countProducts(thisMonthRecs);
+    const lastMonthProducts = countProducts(lastMonthRecs);
+
     const monthDiff = thisMonthCount - lastMonthCount;
     const monthDiffHtml = monthDiff > 0
       ? `<span class="stat-trend up">▲ ${monthDiff}</span>`
@@ -1060,17 +1086,18 @@
         ? `<span class="stat-trend down">▼ ${Math.abs(monthDiff)}</span>`
         : `<span class="stat-trend flat">— 동일</span>`;
 
-    // 총 월 렌탈료 → 제거됨
-
-    // 담당자별 이번 달 실적
+    // 담당자별 이번 달 실적 (접수 건수 + 제품 대수)
     const managerStats = {};
     thisMonthRecs.forEach((r) => {
       const m = r.managerName || '미지정';
-      managerStats[m] = (managerStats[m] || 0) + 1;
+      if (!managerStats[m]) managerStats[m] = { count: 0, products: 0 };
+      managerStats[m].count += 1;
+      const prods = r.productsJson ? (() => { try { return JSON.parse(r.productsJson); } catch { return []; } })() : [];
+      managerStats[m].products += (prods.length > 0 ? prods.length : 1);
     });
     const managerRows = Object.entries(managerStats)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, cnt]) => `<div class="stat-rank-row"><span>${escapeHtml(name)}</span><span class="stat-rank-num">${cnt}건</span></div>`)
+      .sort((a, b) => b[1].products - a[1].products)
+      .map(([name, s]) => `<div class="stat-rank-row"><span>${escapeHtml(name)}</span><span class="stat-rank-num">${s.count}건 / ${s.products}대</span></div>`)
       .join('') || '<div class="stat-rank-row empty">접수 없음</div>';
 
     // 품목별 렌탈 수 (productName 앞 키워드 추출)
@@ -1084,24 +1111,33 @@
       { key: '안마의자', label: '안마의자 💆' },
     ];
     const categoryStats = {};
+    let totalProducts = 0;
     state.records.forEach((r) => {
-      const name = (r.productName || '').toLowerCase();
-      let matched = false;
-      for (const { key, label } of categoryKeywords) {
-        if (name.includes(key)) {
-          categoryStats[label] = (categoryStats[label] || 0) + 1;
-          matched = true;
-          break;
+      // productsJson에서 전체 제품 풀어서 카운트
+      const prods = r.productsJson ? (() => { try { return JSON.parse(r.productsJson); } catch { return []; } })() : [];
+      const productNames = prods.length > 0
+        ? prods.map((p) => (p.title || '').toLowerCase())
+        : [(r.productName || '').toLowerCase()];
+      productNames.forEach((name) => {
+        if (!name) return;
+        totalProducts++;
+        let matched = false;
+        for (const { key, label } of categoryKeywords) {
+          if (name.includes(key)) {
+            categoryStats[label] = (categoryStats[label] || 0) + 1;
+            matched = true;
+            break;
+          }
         }
-      }
-      if (!matched) {
-        categoryStats['기타'] = (categoryStats['기타'] || 0) + 1;
-      }
+        if (!matched) {
+          categoryStats['기타'] = (categoryStats['기타'] || 0) + 1;
+        }
+      });
     });
     const categoryRows = Object.entries(categoryStats)
       .sort((a, b) => b[1] - a[1])
       .map(([label, cnt]) => {
-        const pct = total > 0 ? Math.round((cnt / total) * 100) : 0;
+        const pct = totalProducts > 0 ? Math.round((cnt / totalProducts) * 100) : 0;
         return `
           <div class="stat-bar-row">
             <span class="stat-bar-label">${label}</span>
@@ -1118,9 +1154,9 @@
         <div class="stat-label">총 누적 접수</div>
       </div>
       <div class="stat-card">
-        <div class="stat-num">${thisMonthCount} ${monthDiffHtml}</div>
+        <div class="stat-num">${thisMonthCount}건 / ${thisMonthProducts}대 ${monthDiffHtml}</div>
         <div class="stat-label">이번 달 접수</div>
-        <div class="stat-sub">지난달 ${lastMonthCount}건</div>
+        <div class="stat-sub">지난달 ${lastMonthCount}건 / ${lastMonthProducts}대</div>
       </div>
       <div class="stat-card stat-card-wide">
         <div class="stat-label-top">👤 이번 달 담당자별 실적</div>
@@ -1176,17 +1212,22 @@
     if (countEl) countEl.textContent = list.length > 0 ? `총 ${list.length}건` : '';
 
     if (list.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6b7280;padding:24px;">데이터가 없습니다.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7280;padding:24px;">데이터가 없습니다.</td></tr>';
       return;
     }
     tbody.innerHTML = list.map((r, i) => `
       <tr class="db-row" onclick="window._viewRecord('${r.id}')">
         <td data-label="#">${i + 1}</td>
-        <td data-label="담당자">${escapeHtml(r.managerName || '-')}</td>
         <td data-label="성함"><strong>${escapeHtml(r.customerName)}</strong></td>
         <td data-label="핸드폰">${escapeHtml(r.customerPhone)}</td>
-        <td data-label="제품">${escapeHtml(r.productName)}<br><small style="color:#6b7280">${escapeHtml(r.productModel)}</small></td>
-        <td data-label="결제"><span class="badge ${r.payMethod === '신용카드' ? 'badge-card' : 'badge-account'}">${escapeHtml(r.payMethod)}</span></td>
+        <td data-label="제품">${(() => {
+          const prods = r.productsJson ? (() => { try { return JSON.parse(r.productsJson); } catch { return []; } })() : [];
+          if (prods.length > 1) {
+            return prods.map((p) => `<div style="padding:3px 0;border-bottom:1px dashed #e8eaf0;"><strong>${escapeHtml(p.title)}</strong> <small style="color:#6b7280">${escapeHtml(p.model)}</small><br><small style="color:#6b7280">${escapeHtml(p.contractTerm)} · ${escapeHtml(p.manageType)} · ${Number(p.rentalFee).toLocaleString()}원</small></div>`).join('');
+          }
+          return `${escapeHtml(r.productName)}<br><small style="color:#6b7280">${escapeHtml(r.productModel)}</small>`;
+        })()}</td>
+        <td data-label="담당자"><span class="badge badge-manager">${escapeHtml(r.managerName || '-')}</span></td>
         <td data-label="렌탈료">${r.rentalFee ? formatFee(r.rentalFee) : '-'}</td>
         <td data-label="관리" onclick="event.stopPropagation()">
           <div style="display:flex;gap:6px;justify-content:center;">

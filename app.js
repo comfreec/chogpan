@@ -1209,12 +1209,20 @@
     });
     const sorted = [...months].sort().reverse();
     const current = sel.value;
-    sel.innerHTML = '<option value="">전체 월</option>' +
+    // 당월 기본값
+    const now = new Date();
+    const thisYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    sel.innerHTML = '<option value="">전체</option>' +
       sorted.map((m) => {
         const [y, mo] = m.split('-');
         return `<option value="${m}">${y}년 ${parseInt(mo, 10)}월</option>`;
       }).join('');
-    if (current && months.has(current)) sel.value = current;
+    // 기존 선택 유지, 없으면 당월 기본 선택
+    if (current && months.has(current)) {
+      sel.value = current;
+    } else if (months.has(thisYM)) {
+      sel.value = thisYM;
+    }
   }
 
   // DB 탭 담당자 필터 옵션 갱신

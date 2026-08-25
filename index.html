@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>코웨이 렌탈 접수 관리</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
-<link rel="stylesheet" href="styles.css?v=20260846">
+<link rel="stylesheet" href="styles.css?v=20260858">
 </head>
 <body>
 
@@ -196,6 +196,26 @@
         <div id="productAddRow" style="display:none; margin-bottom:8px;">
           <button type="button" class="btn btn-primary" id="addCartBtn">＋ 이 제품 추가</button>
         </div>
+
+        <!-- 수동 입력 -->
+        <details class="manual-product-details">
+          <summary class="manual-product-toggle">✍️ 수동 입력으로 제품 추가</summary>
+          <div class="manual-product-form">
+            <div class="form-row">
+              <div class="form-group"><label>제품명</label><input type="text" id="manualTitle" placeholder="예: 코웨이 정수기"></div>
+              <div class="form-group"><label>모델명</label><input type="text" id="manualModel" placeholder="예: CP-7211N"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>관리방식</label><input type="text" id="manualManageType" placeholder="예: 방문관리"></div>
+              <div class="form-group"><label>약정</label><input type="text" id="manualContract" placeholder="예: 5년약정"></div>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label>월 렌탈료</label><input type="number" id="manualFee" placeholder="예: 32900" inputmode="numeric"></div>
+              <div class="form-group"><label>13.3제외</label><input type="number" id="manualFee133" placeholder="수수료 (선택)" inputmode="numeric"></div>
+            </div>
+            <button type="button" class="btn btn-primary" id="addManualCartBtn">＋ 수동 제품 추가</button>
+          </div>
+        </details>
 
         <!-- hidden 필드 (저장용 — 첫 번째 제품 기준) -->
         <input type="hidden" id="productName" name="productName">
@@ -502,7 +522,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="products-data.js?v=20260848"></script>
-<script src="app.js?v=20260848"></script>
+<script src="products-data.js?v=20260858"></script>
+<script src="app.js?v=20260858"></script>
 </body>
 </html>

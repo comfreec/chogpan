@@ -432,13 +432,16 @@
         }
       }
 
-      if (!title || !manageType || !contractTerm || !rentalFee) continue;
-      // 헤더행 스킵
-      if (title === '타이틀' || manageType === '관리구분' || manageType === '관리방식') continue;
+      if (!title || !contractTerm || !rentalFee) continue;
+      // 헤더행 스킵 — title이 '타이틀'인 진짜 헤더만 스킵
+      if (title === '타이틀') continue;
       // 빈 행 스킵
       if (title.length < 2) continue;
 
-      products.push({ title, model, manageType, contractTerm, manageCycle, rentalPeriod, rentalFee, fee133, promo });
+      // manageType이 헤더값이면 빈 문자열로 변환
+      const finalManageType = (manageType === '관리구분' || manageType === '관리방식') ? '' : manageType;
+
+      products.push({ title, model, manageType: finalManageType, contractTerm, manageCycle, rentalPeriod, rentalFee, fee133, promo });
     }
     return products;
   }
@@ -476,24 +479,24 @@
 
   async function uploadProductsToFirestore(products) {
     if (!state.fbEnabled) throw new Error('Firestore 미연결');
-    // 기존 전체 삭제
-    const existing = await state.fbDb.collection('products').get();
-    if (!existing.empty) {
-      // 100개씩 배치 삭제
-      const docRefs = [];
-      existing.forEach((doc) => docRefs.push(doc.ref));
-      for (let i = 0; i < docRefs.length; i += 100) {
-        const delBatch = state.fbDb.batch();
-        docRefs.slice(i, i + 100).forEach((ref) => delBatch.delete(ref));
-        await delBatch.commit();
-      }
+
+    // 기존 전체 삭제 (반복해서 완전 삭제 보장)
+    let deleteCount = 0;
+    while (true) {
+      const snap = await state.fbDb.collection('products').limit(500).get();
+      if (snap.empty) break;
+      const batch = state.fbDb.batch();
+      snap.forEach((doc) => { batch.delete(doc.ref); deleteCount++; });
+      await batch.commit();
     }
-    // 새 데이터 100개씩 배치 업로드
-    for (let i = 0; i < products.length; i += 100) {
+    console.log(`[업로드] 기존 ${deleteCount}개 삭제 완료`);
+
+    // 새 데이터 500개씩 배치 업로드
+    let uploadCount = 0;
+    for (let i = 0; i < products.length; i += 500) {
       const addBatch = state.fbDb.batch();
-      products.slice(i, i + 100).forEach((p) => {
+      products.slice(i, i + 500).forEach((p) => {
         const ref = state.fbDb.collection('products').doc();
-        // promo 포함 모든 필드 명시적으로 저장
         addBatch.set(ref, {
           title: p.title || '',
           model: p.model || '',
@@ -505,6 +508,7 @@
           fee133: p.fee133 || 0,
           promo: p.promo || '',
         });
+        uploadCount++;
       });
       await addBatch.commit();
     }
@@ -1461,10 +1465,13 @@
 
       const seen = new Set();
       const matches = [];
+      const qWords = q.split(/\s+/).filter(Boolean);
       state.products.forEach((p) => {
         const key = p.title + '|' + p.model;
         if (seen.has(key)) return;
-        if (p.title.toLowerCase().includes(q) || (p.model || '').toLowerCase().includes(q)) {
+        const combined = (p.title + ' ' + (p.model || '')).toLowerCase();
+        const isMatch = qWords.every((w) => combined.includes(w));
+        if (isMatch) {
           seen.add(key); matches.push(p);
         }
       });
@@ -1476,8 +1483,9 @@
         return;
       }
       dropdown.innerHTML = matches.slice(0, 40).map((p) => {
-        const ht = p.title.replace(new RegExp(`(${escapeRegex(q)})`, 'gi'), '<mark>$1</mark>');
-        const hm = (p.model || '').replace(new RegExp(`(${escapeRegex(q)})`, 'gi'), '<mark>$1</mark>');
+        const hlRegex = new RegExp(`(${qWords.map(escapeRegex).join('|')})`, 'gi');
+        const ht = p.title.replace(hlRegex, '<mark>$1</mark>');
+        const hm = (p.model || '').replace(hlRegex, '<mark>$1</mark>');
         return `<div class="pd-item" data-title="${escapeHtml(p.title)}">
           <div class="pd-title">${ht}</div><div class="pd-model">${hm}</div></div>`;
       }).join('');
@@ -1558,6 +1566,28 @@
       $('#productManageType').innerHTML = '<option value="">-- 선택 --</option>';
       $('#productContract').innerHTML = '<option value="">-- 선택 --</option>';
       showToast('제품이 추가되었습니다.', 'success', 1500);
+    });
+
+    // 수동 제품 추가
+    $('#addManualCartBtn')?.addEventListener('click', () => {
+      const title = ($('#manualTitle')?.value || '').trim();
+      const model = ($('#manualModel')?.value || '').trim();
+      const manageType = ($('#manualManageType')?.value || '').trim();
+      const contractTerm = ($('#manualContract')?.value || '').trim();
+      const rentalFee = parseInt($('#manualFee')?.value || '0', 10);
+      const fee133 = parseInt($('#manualFee133')?.value || '0', 10);
+      if (!title) { showToast('제품명을 입력하세요.', 'error'); return; }
+      if (!rentalFee) { showToast('렌탈료를 입력하세요.', 'error'); return; }
+      productCart.push({ title, model, manageType, contractTerm, rentalFee, fee133, promo: '' });
+      renderCartItems();
+      // 폼 초기화
+      $('#manualTitle').value = '';
+      $('#manualModel').value = '';
+      $('#manualManageType').value = '';
+      $('#manualContract').value = '';
+      $('#manualFee').value = '';
+      $('#manualFee133').value = '';
+      showToast('수동 제품이 추가되었습니다.', 'success', 1500);
     });
   }
 

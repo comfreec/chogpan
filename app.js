@@ -854,18 +854,19 @@
       const q = state.searchQuery.toLowerCase().trim();
       const qNum = q.replace(/\D/g, '');
       list = list.filter((r) => {
-        // 이름 검색
         if ((r.customerName || '').toLowerCase().includes(q)) return true;
-        // 전화번호 검색 (숫자만)
         if (qNum && (r.customerPhone || '').replace(/\D/g, '').includes(qNum)) return true;
-        // 제품명 검색
         if ((r.productName || '').toLowerCase().includes(q)) return true;
-        // 모델명 검색
         if ((r.productModel || '').toLowerCase().includes(q)) return true;
-        // 주소 검색
         if ((r.installAddress || '').toLowerCase().includes(q)) return true;
-        // 담당자 검색
         if ((r.managerName || '').toLowerCase().includes(q)) return true;
+        // productsJson 내 모든 제품 검색
+        if (r.productsJson) {
+          try {
+            const prods = JSON.parse(r.productsJson);
+            if (prods.some((p) => (p.title || '').toLowerCase().includes(q) || (p.model || '').toLowerCase().includes(q))) return true;
+          } catch {}
+        }
         return false;
       });
     }
@@ -1186,6 +1187,13 @@
         if ((r.productModel || '').toLowerCase().includes(q)) return true;
         if ((r.installAddress || '').toLowerCase().includes(q)) return true;
         if ((r.managerName || '').toLowerCase().includes(q)) return true;
+        // productsJson 내 모든 제품 검색
+        if (r.productsJson) {
+          try {
+            const prods = JSON.parse(r.productsJson);
+            if (prods.some((p) => (p.title || '').toLowerCase().includes(q) || (p.model || '').toLowerCase().includes(q))) return true;
+          } catch {}
+        }
         return false;
       });
     }
@@ -1228,7 +1236,14 @@
           return `${escapeHtml(r.productName)}<br><small style="color:#6b7280">${escapeHtml(r.productModel)}</small>`;
         })()}</td>
         <td data-label="담당자"><span class="badge badge-manager">${escapeHtml(r.managerName || '-')}</span></td>
-        <td data-label="렌탈료">${r.rentalFee ? formatFee(r.rentalFee) : '-'}</td>
+        <td data-label="렌탈료">${(() => {
+          const prods = r.productsJson ? (() => { try { return JSON.parse(r.productsJson); } catch { return []; } })() : [];
+          if (prods.length > 1) {
+            const total = prods.reduce((s, p) => s + (Number(p.rentalFee) || 0), 0);
+            return formatFee(total);
+          }
+          return r.rentalFee ? formatFee(r.rentalFee) : '-';
+        })()}</td>
         <td data-label="관리" onclick="event.stopPropagation()">
           <div style="display:flex;gap:6px;justify-content:center;">
             <button class="btn btn-sm btn-outline" onclick="window._viewRecord('${r.id}')">상세</button>

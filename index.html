@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>코웨이 렌탈 접수 관리</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
-<link rel="stylesheet" href="styles.css?v=20260858">
+<link rel="stylesheet" href="styles.css?v=20260861">
 </head>
 <body>
 
@@ -192,8 +192,11 @@
           </div>
         </div>
 
-        <!-- 추가 버튼 -->
+        <!-- 추가 버튼 + 비고 입력 -->
         <div id="productAddRow" style="display:none; margin-bottom:8px;">
+          <div class="form-group" style="margin-bottom:8px;">
+            <input type="text" id="productNote" placeholder="할인/비고 (선택)" style="font-size:13px;">
+          </div>
           <button type="button" class="btn btn-primary" id="addCartBtn">＋ 이 제품 추가</button>
         </div>
 
@@ -213,6 +216,7 @@
               <div class="form-group"><label>월 렌탈료</label><input type="number" id="manualFee" placeholder="예: 32900" inputmode="numeric"></div>
               <div class="form-group"><label>13.3제외</label><input type="number" id="manualFee133" placeholder="수수료 (선택)" inputmode="numeric"></div>
             </div>
+            <div class="form-group"><label>할인/비고</label><input type="text" id="manualNote" placeholder="프로모션, 할인 내용 (선택)"></div>
             <button type="button" class="btn btn-primary" id="addManualCartBtn">＋ 수동 제품 추가</button>
           </div>
         </details>
@@ -224,11 +228,7 @@
         <input type="hidden" id="manageType" name="manageType">
         <input type="hidden" id="rentalFee" name="rentalFee">
         <input type="hidden" id="productsJson" name="productsJson">
-
-        <div class="form-group" style="margin-top:8px;">
-          <label for="otherDiscount">기타 할인 / 비고</label>
-          <textarea id="otherDiscount" name="otherDiscount" rows="2" placeholder="추가 할인 내용, 특이사항 등을 기입하세요"></textarea>
-        </div>
+        <input type="hidden" id="otherDiscount" name="otherDiscount">
       </fieldset>
 
       <div class="form-actions">
@@ -522,7 +522,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-<script src="products-data.js?v=20260858"></script>
-<script src="app.js?v=20260858"></script>
+<script src="products-data.js?v=20260864"></script>
+<script src="app.js?v=20260864"></script>
 </body>
 </html>

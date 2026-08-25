@@ -439,9 +439,17 @@
       if (title.length < 2) continue;
 
       // manageType이 헤더값이면 빈 문자열로 변환
-      const finalManageType = (manageType === '관리구분' || manageType === '관리방식') ? '' : manageType;
+      let finalManageType = (manageType === '관리구분' || manageType === '관리방식') ? '' : manageType;
 
-      products.push({ title, model, manageType: finalManageType, contractTerm, manageCycle, rentalPeriod, rentalFee, fee133, promo });
+      // contractTerm에 '_'가 포함된 경우 (예: "5년약정_스페셜체인지") → 분리
+      let finalContractTerm = contractTerm;
+      if (contractTerm.includes('_')) {
+        const parts = contractTerm.split('_');
+        finalContractTerm = parts[0]; // 5년약정
+        if (!finalManageType && parts[1]) finalManageType = parts[1]; // 스페셜체인지
+      }
+
+      products.push({ title, model, manageType: finalManageType, contractTerm: finalContractTerm, manageCycle, rentalPeriod, rentalFee, fee133, promo });
     }
     return products;
   }
@@ -798,7 +806,7 @@
       products.forEach((p, i) => {
         if (i > 0) lines.push('');
         lines.push(`[${i + 1}] ${p.title} (${p.model || ''})`);
-        lines.push(`    ${p.contractTerm} / ${p.manageType} / ${Number(p.rentalFee).toLocaleString()}원${p.promo ? ' / 🎁' + p.promo : ''}`);
+        lines.push(`    ${p.contractTerm} / ${p.manageType} / ${Number(p.rentalFee).toLocaleString()}원${p.note ? ' / 📝' + p.note : (p.promo ? ' / 🎁' + p.promo : '')}`);
       });
       const total = products.reduce((s, p) => s + (Number(p.rentalFee) || 0), 0);
       lines.push('');
@@ -1013,7 +1021,7 @@
                   <span class="multi-product-num">${i + 1}</span>
                   <div class="multi-product-info">
                     <div class="multi-product-title">${escapeHtml(p.title)} <small>${escapeHtml(p.model || '')}</small></div>
-                    <div class="multi-product-meta">${escapeHtml(p.contractTerm)} · ${escapeHtml(p.manageType)} · <strong>${Number(p.rentalFee).toLocaleString()}원</strong>${p.promo ? ' · 🎁 ' + escapeHtml(p.promo) : ''}${p.fee133 ? ' <span class="fee133-badge">💰 ' + Number(p.fee133).toLocaleString() + '</span>' : ''}</div>
+                    <div class="multi-product-meta">${escapeHtml(p.contractTerm)} · ${escapeHtml(p.manageType)} · <strong>${Number(p.rentalFee).toLocaleString()}원</strong>${p.note ? ' · 📝 ' + escapeHtml(p.note) : (p.promo ? ' · 🎁 ' + escapeHtml(p.promo) : '')}${p.fee133 ? ' <span class="fee133-badge">💰 ' + Number(p.fee133).toLocaleString() + '</span>' : ''}</div>
                   </div>
                 </div>`).join('')}
               <div class="multi-product-total">합계 월 렌탈료: <strong>${total.toLocaleString()}원</strong>${totalFee133 ? ' <span class="fee133-badge">💰 ' + totalFee133.toLocaleString() + '</span>' : ''}</div>
@@ -1303,7 +1311,13 @@
     openDetail(id);
   };
   window._deleteFromDb = async (id, name) => {
-    if (!confirm(`"${name}" 접수를 삭제할까요?\nFirestore DB에서 영구 삭제됩니다.`)) return;
+    if (!isSettingsAuthed()) {
+      const pw = prompt(`"${name}" 접수를 삭제하려면 비밀번호를 입력하세요.`);
+      if (pw === null) return;
+      if (pw !== 'comfreec') { showToast('비밀번호가 틀렸습니다.', 'error'); return; }
+      saveSettingsAuth();
+    }
+    if (!confirm(`"${name}" 접수를 삭제할까요?`)) return;
     try {
       await deleteRecord(id);
       showToast('삭제되었습니다.', 'success');
@@ -1415,7 +1429,7 @@
       <li class="cart-item">
         <div class="cart-item-info">
           <span class="cart-item-title">${escapeHtml(item.title)}</span>
-          <span class="cart-item-sub">${escapeHtml(item.model)} · ${escapeHtml(item.manageType)} · ${escapeHtml(item.contractTerm)} · ${Number(item.rentalFee).toLocaleString()}원${item.promo ? ' · 🎁 ' + escapeHtml(item.promo) : ''}${item.fee133 ? ' <span class="fee133-badge">💰 ' + Number(item.fee133).toLocaleString() + '</span>' : ''}</span>
+          <span class="cart-item-sub">${escapeHtml(item.model)} · ${escapeHtml(item.manageType)} · ${escapeHtml(item.contractTerm)} · ${Number(item.rentalFee).toLocaleString()}원${item.note ? ' · 📝 ' + escapeHtml(item.note) : (item.promo ? ' · 🎁 ' + escapeHtml(item.promo) : '')}${item.fee133 ? ' <span class="fee133-badge">💰 ' + Number(item.fee133).toLocaleString() + '</span>' : ''}</span>
         </div>
         <button type="button" class="btn-cart-remove" onclick="window._removeCartItem(${i})">✕</button>
       </li>`).join('');
@@ -1427,6 +1441,9 @@
     $('#manageType').value = first.manageType || '';
     $('#rentalFee').value = first.rentalFee || '';
     $('#productsJson').value = JSON.stringify(productCart);
+    // otherDiscount: 제품별 비고를 합산
+    const notes = productCart.map((p) => p.note || p.promo || '').filter(Boolean);
+    $('#otherDiscount').value = notes.join(' / ');
   }
 
   window._removeCartItem = (i) => {
@@ -1438,21 +1455,6 @@
     const searchInput = $('#productSearchInput');
     const dropdown = $('#productDropdown');
     if (!searchInput || !dropdown) return;
-
-    // 비고란 수동입력 추적
-    const discountEl = $('#otherDiscount');
-    if (discountEl) {
-      discountEl.dataset.manualText = '';
-      discountEl.addEventListener('input', () => {
-        // 자동입력 부분 제외한 수동 입력 추적
-        const autoPromo = discountEl.dataset.autoPromo || '';
-        let val = discountEl.value;
-        if (autoPromo && val.endsWith(autoPromo)) {
-          val = val.slice(0, val.length - autoPromo.length).replace(/\n$/, '');
-        }
-        discountEl.dataset.manualText = val;
-      });
-    }
 
     searchInput.addEventListener('input', () => {
       const q = searchInput.value.trim().toLowerCase();
@@ -1511,9 +1513,7 @@
       hideSelectedBadge();
       $('#productDetailRow').style.display = 'none';
       $('#productAddRow').style.display = 'none';
-      // 비고란 프로모션 초기화
-      const de = $('#otherDiscount');
-      if (de) { de.value = de.dataset.manualText || ''; de.dataset.autoPromo = ''; }
+      if ($('#productNote')) $('#productNote').value = '';
     });
 
     $('#productManageType')?.addEventListener('change', () => {
@@ -1534,18 +1534,9 @@
       );
       if (!item) return;
       currentCartItem = { ...item };
-      // 약정 선택 시 비고란 초기화 후 프로모션 입력
-      const discountEl = $('#otherDiscount');
-      if (discountEl) {
-        // 기존에 자동입력된 프로모션만 제거 (수동 입력은 유지)
-        // 가장 간단하게: 약정 바꿀 때마다 자동입력 부분만 교체
-        discountEl.dataset.autoPromo = item.promo || '';
-        const manualText = (discountEl.dataset.manualText || '').trim();
-        const promoText = (item.promo || '').trim();
-        discountEl.value = manualText
-          ? (promoText ? manualText + '\n' + promoText : manualText)
-          : promoText;
-      }
+      // 프로모션을 제품 비고 입력란에 자동 입력
+      const noteEl = $('#productNote');
+      if (noteEl) noteEl.value = item.promo || '';
 
       showSelectedBadge(currentCartItem);
       $('#productAddRow').style.display = 'block';
@@ -1554,7 +1545,13 @@
     // 추가 버튼
     $('#addCartBtn')?.addEventListener('click', () => {
       if (!currentCartItem) return;
-      productCart.push({ ...currentCartItem });
+      const note = ($('#productNote')?.value || '').trim();
+      const item = { ...currentCartItem };
+      // 프로모션+수동비고 합치기
+      if (note) item.note = note;
+      else if (item.promo) item.note = item.promo;
+      else item.note = '';
+      productCart.push(item);
       renderCartItems();
 
       // 초기화 후 다음 제품 바로 선택 가능
@@ -1563,6 +1560,7 @@
       hideSelectedBadge();
       $('#productDetailRow').style.display = 'none';
       $('#productAddRow').style.display = 'none';
+      if ($('#productNote')) $('#productNote').value = '';
       $('#productManageType').innerHTML = '<option value="">-- 선택 --</option>';
       $('#productContract').innerHTML = '<option value="">-- 선택 --</option>';
       showToast('제품이 추가되었습니다.', 'success', 1500);
@@ -1576,9 +1574,10 @@
       const contractTerm = ($('#manualContract')?.value || '').trim();
       const rentalFee = parseInt($('#manualFee')?.value || '0', 10);
       const fee133 = parseInt($('#manualFee133')?.value || '0', 10);
+      const note = ($('#manualNote')?.value || '').trim();
       if (!title) { showToast('제품명을 입력하세요.', 'error'); return; }
       if (!rentalFee) { showToast('렌탈료를 입력하세요.', 'error'); return; }
-      productCart.push({ title, model, manageType, contractTerm, rentalFee, fee133, promo: '' });
+      productCart.push({ title, model, manageType, contractTerm, rentalFee, fee133, promo: '', note });
       renderCartItems();
       // 폼 초기화
       $('#manualTitle').value = '';
@@ -1587,8 +1586,19 @@
       $('#manualContract').value = '';
       $('#manualFee').value = '';
       $('#manualFee133').value = '';
+      $('#manualNote').value = '';
       showToast('수동 제품이 추가되었습니다.', 'success', 1500);
     });
+
+    // 수동입력 폼 외부 터치 시 닫기
+    const manualDetails = document.querySelector('.manual-product-details');
+    if (manualDetails) {
+      document.addEventListener('click', (e) => {
+        if (manualDetails.open && !manualDetails.contains(e.target)) {
+          manualDetails.open = false;
+        }
+      });
+    }
   }
 
   function onProductTitleSelected(title) {
@@ -2029,7 +2039,13 @@
     });
     $('#deleteRecordBtn').addEventListener('click', async () => {
       if (!state.currentDetail) return;
-      if (!confirm('이 접수 기록을 삭제할까요?')) return;
+      if (!isSettingsAuthed()) {
+        const pw = prompt('삭제하려면 비밀번호를 입력하세요.');
+        if (pw === null) return;
+        if (pw !== 'comfreec') { showToast('비밀번호가 틀렸습니다.', 'error'); return; }
+        saveSettingsAuth();
+      }
+      if (!confirm('이 접수를 삭제할까요?')) return;
       const id = state.currentDetail.id;
       try {
         await deleteRecord(id);

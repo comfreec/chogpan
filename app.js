@@ -2099,6 +2099,12 @@
     });
     $('#editRecordBtn').addEventListener('click', () => {
       if (!state.currentDetail) return;
+      const pw = prompt('수정하려면 비밀번호를 입력하세요.');
+      if (pw === null) return;
+      if (pw !== SETTINGS_PW) {
+        showToast('비밀번호가 틀렸습니다.', 'error');
+        return;
+      }
       openEdit(state.currentDetail.id);
     });
     $('#deleteRecordBtn').addEventListener('click', async () => {

@@ -1668,6 +1668,53 @@
   }
 
   // ===== 수정 모달 =====
+  let editProductCart = [];
+
+  function recordProductsForEdit(record) {
+    if (record.productsJson) {
+      try {
+        const products = JSON.parse(record.productsJson);
+        if (Array.isArray(products) && products.length > 0) return products.map((p) => ({ ...p }));
+      } catch { /* 기존 단일 제품 필드로 폴백 */ }
+    }
+    if (!record.productName) return [];
+    return [{
+      title: record.productName || '',
+      model: record.productModel || '',
+      contractTerm: record.contractTerm || '',
+      manageType: record.manageType || '',
+      rentalFee: Number(record.rentalFee) || 0,
+      fee133: Number(record.fee133) || 0,
+      promo: '',
+      note: record.otherDiscount || '',
+    }];
+  }
+
+  function renderEditProducts() {
+    const list = $('#editProductsList');
+    if (!list) return;
+    if (editProductCart.length === 0) {
+      list.innerHTML = '<p class="empty-msg">제품을 1개 이상 추가하세요.</p>';
+      return;
+    }
+    list.innerHTML = editProductCart.map((p, i) => `
+      <div class="edit-product-item" data-index="${i}">
+        <div class="edit-product-item-header">
+          <span>제품 ${i + 1}</span>
+          <button type="button" class="btn-cart-remove edit-product-remove">삭제</button>
+        </div>
+        <div class="edit-product-grid">
+          <input class="edit-product-field" data-field="title" value="${escapeHtml(p.title || '')}" placeholder="제품명">
+          <input class="edit-product-field" data-field="model" value="${escapeHtml(p.model || '')}" placeholder="모델명">
+          <input class="edit-product-field" data-field="manageType" value="${escapeHtml(p.manageType || '')}" placeholder="관리 방식">
+          <input class="edit-product-field" data-field="contractTerm" value="${escapeHtml(p.contractTerm || '')}" placeholder="약정 기간">
+          <input class="edit-product-field" data-field="rentalFee" type="number" min="0" value="${Number(p.rentalFee) || ''}" placeholder="월 렌탈료">
+          <input class="edit-product-field" data-field="fee133" type="number" min="0" value="${Number(p.fee133) || ''}" placeholder="13.3 제외 수수료">
+          <input class="edit-product-field edit-product-wide" data-field="note" value="${escapeHtml(p.note || p.promo || '')}" placeholder="할인 / 비고">
+        </div>
+      </div>`).join('');
+  }
+
   function openEdit(id) {
     const r = state.records.find((x) => x.id === id);
     if (!r) return;
@@ -1688,11 +1735,8 @@
       el.checked = el.value === r.gender;
     });
     $('#edit_installAddress').value = r.installAddress || '';
-    $('#edit_productName').value = r.productName || '';
-    $('#edit_productModel').value = r.productModel || '';
-    $('#edit_contractTerm').value = r.contractTerm || '';
-    $('#edit_manageType').value = r.manageType || '';
-    $('#edit_rentalFee').value = r.rentalFee || '';
+    editProductCart = recordProductsForEdit(r);
+    renderEditProducts();
     $('#edit_managerName').value = r.managerName || '';
     $('#edit_otherDiscount').value = r.otherDiscount || '';
 
@@ -1727,6 +1771,31 @@
     $('#closeEditBtn')?.addEventListener('click', closeEdit);
     $('#cancelEditBtn')?.addEventListener('click', closeEdit);
     $('#editModalOverlay')?.addEventListener('click', closeEdit);
+    $('#addEditProductBtn')?.addEventListener('click', () => {
+      editProductCart.push({ title: '', model: '', manageType: '', contractTerm: '', rentalFee: 0, fee133: 0, promo: '', note: '' });
+      renderEditProducts();
+      $('#editProductsList .edit-product-item:last-child input')?.focus();
+    });
+    $('#editProductsList')?.addEventListener('input', (e) => {
+      const field = e.target.closest('.edit-product-field');
+      const item = e.target.closest('.edit-product-item');
+      if (!field || !item) return;
+      const index = Number(item.dataset.index);
+      if (!editProductCart[index]) return;
+      const key = field.dataset.field;
+      editProductCart[index][key] = (key === 'rentalFee' || key === 'fee133') ? (Number(field.value) || 0) : field.value;
+      if (key === 'note') {
+        editProductCart[index].promo = '';
+        $('#edit_otherDiscount').value = editProductCart.map((p) => p.note || p.promo || '').filter(Boolean).join(' / ');
+      }
+    });
+    $('#editProductsList')?.addEventListener('click', (e) => {
+      const removeBtn = e.target.closest('.edit-product-remove');
+      if (!removeBtn) return;
+      const item = removeBtn.closest('.edit-product-item');
+      editProductCart.splice(Number(item.dataset.index), 1);
+      renderEditProducts();
+    });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && $('#editModal').style.display === 'flex') closeEdit();
     });
@@ -1766,6 +1835,13 @@
       const payMethod = document.querySelector('input[name="edit_payMethod"]:checked')?.value || '';
       const gender = document.querySelector('input[name="edit_gender"]:checked')?.value || '';
 
+      const products = editProductCart
+        .map((p) => ({ ...p, title: (p.title || '').trim(), model: (p.model || '').trim(), manageType: (p.manageType || '').trim(), contractTerm: (p.contractTerm || '').trim(), note: (p.note || '').trim(), rentalFee: Number(p.rentalFee) || 0, fee133: Number(p.fee133) || 0 }))
+        .filter((p) => p.title);
+      if (products.length === 0) { showToast('제품을 1개 이상 입력하세요.', 'error'); return; }
+      if (products.some((p) => !p.rentalFee)) { showToast('모든 제품의 월 렌탈료를 입력하세요.', 'error'); return; }
+      const firstProduct = products[0];
+
       const updates = {
         customerName: $('#edit_customerName').value.trim(),
         customerPhone: $('#edit_customerPhone').value.trim(),
@@ -1773,11 +1849,13 @@
         birthDate: $('#edit_birthDate').value,
         gender,
         installAddress: $('#edit_installAddress').value.trim(),
-        productName: $('#edit_productName').value.trim(),
-        productModel: $('#edit_productModel').value.trim(),
-        contractTerm: $('#edit_contractTerm').value.trim(),
-        manageType: $('#edit_manageType').value.trim(),
-        rentalFee: $('#edit_rentalFee').value,
+        productName: firstProduct.title,
+        productModel: firstProduct.model,
+        contractTerm: firstProduct.contractTerm,
+        manageType: firstProduct.manageType,
+        rentalFee: firstProduct.rentalFee,
+        fee133: firstProduct.fee133,
+        productsJson: JSON.stringify(products),
         managerName: $('#edit_managerName').value.trim(),
         otherDiscount: $('#edit_otherDiscount').value.trim(),
         payMethod,

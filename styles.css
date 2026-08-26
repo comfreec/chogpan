@@ -923,6 +923,42 @@ body {
 }
 .btn-cart-remove:hover { background: #fef2f2; }
 
+/* ===== 수정 모달 제품 목록 ===== */
+.edit-products-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.edit-products-header label { margin-bottom: 0; }
+.edit-products-list { display: flex; flex-direction: column; gap: 10px; }
+.edit-product-item {
+  border: 1.5px solid #dde4fb;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f8f9ff;
+}
+.edit-product-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+  color: #1a56db;
+  font-size: 13px;
+  font-weight: 700;
+}
+.edit-product-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.edit-product-grid input { font-size: 13px; padding: 8px 10px; }
+.edit-product-grid .edit-product-wide { grid-column: 1 / -1; }
+@media (max-width: 640px) {
+  .edit-product-grid { grid-template-columns: 1fr; }
+  .edit-product-grid .edit-product-wide { grid-column: auto; }
+}
+
 /* fee133 수수료 배지 (나만 보는 정보) */
 .fee133-badge {
   display: inline-block;

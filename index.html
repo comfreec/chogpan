@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>코웨이 렌탈 접수 관리</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
-<link rel="stylesheet" href="styles.css?v=20260866">
+<link rel="stylesheet" href="styles.css?v=20260872">
 </head>
 <body>
 
@@ -453,35 +453,16 @@
         <label>설치 주소</label>
         <input type="text" id="edit_installAddress">
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>제품명</label>
-          <input type="text" id="edit_productName">
+      <div class="form-group">
+        <div class="edit-products-header">
+          <label>제품 정보 <span class="req">*</span></label>
+          <button type="button" class="btn btn-sm btn-outline" id="addEditProductBtn">＋ 제품 추가</button>
         </div>
-        <div class="form-group">
-          <label>모델명</label>
-          <input type="text" id="edit_productModel">
-        </div>
+        <div id="editProductsList" class="edit-products-list"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>약정 기간</label>
-          <input type="text" id="edit_contractTerm" placeholder="예: 5년">
-        </div>
-        <div class="form-group">
-          <label>관리 방식</label>
-          <input type="text" id="edit_manageType" placeholder="예: 토탈케어">
-        </div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>월 렌탈료 (원)</label>
-          <input type="number" id="edit_rentalFee" min="0">
-        </div>
-        <div class="form-group">
-          <label>담당자</label>
-          <input type="text" id="edit_managerName">
-        </div>
+      <div class="form-group">
+        <label>담당자</label>
+        <input type="text" id="edit_managerName">
       </div>
       <div class="form-group">
         <label>결제 방식</label>
@@ -523,6 +504,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="products-data.js?v=20260871"></script>
-<script src="app.js?v=20260871"></script>
+<script src="app.js?v=20260872"></script>
 </body>
 </html>

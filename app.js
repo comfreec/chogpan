@@ -1311,12 +1311,9 @@
     openDetail(id);
   };
   window._deleteFromDb = async (id, name) => {
-    if (!isSettingsAuthed()) {
-      const pw = prompt(`"${name}" 접수를 삭제하려면 비밀번호를 입력하세요.`);
-      if (pw === null) return;
-      if (pw !== 'comfreec') { showToast('비밀번호가 틀렸습니다.', 'error'); return; }
-      saveSettingsAuth();
-    }
+    const pw = prompt(`"${name}" 접수를 삭제하려면 비밀번호를 입력하세요.`);
+    if (pw === null) return;
+    if (pw !== 'comfreec') { showToast('비밀번호가 틀렸습니다.', 'error'); return; }
     if (!confirm(`"${name}" 접수를 삭제할까요?`)) return;
     try {
       await deleteRecord(id);
@@ -1948,35 +1945,19 @@
 
   // ===== Tabs =====
   const SETTINGS_PW = 'comfreec';
-  const SETTINGS_PW_KEY = 'chogpan_settings_auth';
-  let settingsUnlocked = false;
-
-  function isSettingsAuthed() {
-    return localStorage.getItem(SETTINGS_PW_KEY) === '1';
-  }
-  function saveSettingsAuth() {
-    localStorage.setItem(SETTINGS_PW_KEY, '1');
-  }
 
   function bindTabs() {
     $$('.tab-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
 
-        // 설정 탭 비밀번호 확인
-        if (tab === 'settings' && !settingsUnlocked) {
-          if (isSettingsAuthed()) {
-            // 이미 인증된 기기 → 바로 통과
-            settingsUnlocked = true;
-          } else {
-            const pw = prompt('설정 비밀번호를 입력하세요.');
-            if (pw === null) return;
-            if (pw !== SETTINGS_PW) {
-              showToast('비밀번호가 틀렸습니다.', 'error');
-              return;
-            }
-            settingsUnlocked = true;
-            saveSettingsAuth();
+        // 설정 탭 비밀번호 확인 (매번)
+        if (tab === 'settings') {
+          const pw = prompt('설정 비밀번호를 입력하세요.');
+          if (pw === null) return;
+          if (pw !== SETTINGS_PW) {
+            showToast('비밀번호가 틀렸습니다.', 'error');
+            return;
           }
         }
 
@@ -2039,12 +2020,9 @@
     });
     $('#deleteRecordBtn').addEventListener('click', async () => {
       if (!state.currentDetail) return;
-      if (!isSettingsAuthed()) {
-        const pw = prompt('삭제하려면 비밀번호를 입력하세요.');
-        if (pw === null) return;
-        if (pw !== 'comfreec') { showToast('비밀번호가 틀렸습니다.', 'error'); return; }
-        saveSettingsAuth();
-      }
+      const pw = prompt('삭제하려면 비밀번호를 입력하세요.');
+      if (pw === null) return;
+      if (pw !== 'comfreec') { showToast('비밀번호가 틀렸습니다.', 'error'); return; }
       if (!confirm('이 접수를 삭제할까요?')) return;
       const id = state.currentDetail.id;
       try {

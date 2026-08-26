@@ -831,6 +831,7 @@ body {
 .pd-item:hover { background: #f5f7ff; }
 .pd-title { font-size: 13px; color: #1a1d27; font-weight: 600; }
 .pd-model { font-size: 11px; color: #9ca3af; margin-top: 2px; font-family: monospace; }
+.pd-extra { font-family: inherit; color: #6b7280; font-style: normal; margin-left: 6px; }
 .pd-item mark {
   background: #fef3c7;
   color: #92400e;

@@ -441,12 +441,12 @@
       // manageType이 헤더값이면 빈 문자열로 변환
       let finalManageType = (manageType === '관리구분' || manageType === '관리방식') ? '' : manageType;
 
-      // contractTerm에 '_'가 포함된 경우 (예: "5년약정_스페셜체인지") → 분리
+      // contractTerm에 '_'가 포함된 경우 (예: "5년약정_스페셜체인지")
+      // manageType이 없으면 '_' 뒤를 관리방식으로 사용, contractTerm은 전체 유지
       let finalContractTerm = contractTerm;
-      if (contractTerm.includes('_')) {
+      if (contractTerm.includes('_') && !finalManageType) {
         const parts = contractTerm.split('_');
-        finalContractTerm = parts[0]; // 5년약정
-        if (!finalManageType && parts[1]) finalManageType = parts[1]; // 스페셜체인지
+        finalManageType = parts[1] || '';
       }
 
       products.push({ title, model, manageType: finalManageType, contractTerm: finalContractTerm, manageCycle, rentalPeriod, rentalFee, fee133, promo });
@@ -497,7 +497,6 @@
       snap.forEach((doc) => { batch.delete(doc.ref); deleteCount++; });
       await batch.commit();
     }
-    console.log(`[업로드] 기존 ${deleteCount}개 삭제 완료`);
 
     // 새 데이터 500개씩 배치 업로드
     let uploadCount = 0;
@@ -1465,10 +1464,14 @@
       const seen = new Set();
       const matches = [];
       const qWords = q.split(/\s+/).filter(Boolean);
+      // 관리방식/약정 키워드가 포함된 검색이면 개별 옵션으로 표시
+      const hasDetailQuery = qWords.some((w) => ['방문', '토탈', '스페셜', '베이직', '서비스', '자가', '셀프', '3년', '5년', '7년', '9년'].some((k) => k.includes(w) || w.includes(k)));
       state.products.forEach((p) => {
-        const key = p.title + '|' + p.model;
+        const key = hasDetailQuery
+          ? p.title + '|' + p.model + '|' + p.manageType + '|' + p.contractTerm
+          : p.title + '|' + p.model;
         if (seen.has(key)) return;
-        const combined = (p.title + ' ' + (p.model || '')).toLowerCase();
+        const combined = [p.title, p.model, p.manageType, p.contractTerm, p.manageCycle, p.promo].filter(Boolean).join(' ').toLowerCase();
         const isMatch = qWords.every((w) => combined.includes(w));
         if (isMatch) {
           seen.add(key); matches.push(p);
@@ -1485,8 +1488,10 @@
         const hlRegex = new RegExp(`(${qWords.map(escapeRegex).join('|')})`, 'gi');
         const ht = p.title.replace(hlRegex, '<mark>$1</mark>');
         const hm = (p.model || '').replace(hlRegex, '<mark>$1</mark>');
+        const extra = [p.manageType, p.contractTerm, p.promo].filter(Boolean).join(' · ');
+        const he = extra ? extra.replace(hlRegex, '<mark>$1</mark>') : '';
         return `<div class="pd-item" data-title="${escapeHtml(p.title)}">
-          <div class="pd-title">${ht}</div><div class="pd-model">${hm}</div></div>`;
+          <div class="pd-title">${ht}</div><div class="pd-model">${hm}${he ? ' <span class="pd-extra">' + he + '</span>' : ''}</div></div>`;
       }).join('');
       dropdown.style.display = 'block';
     });

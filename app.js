@@ -233,6 +233,7 @@
     v = v.replace(/\D/g, '').slice(0, 11);
     if (v.length < 4) return v;
     if (v.length < 8) return v.slice(0, 3) + '-' + v.slice(3);
+    if (v.length === 10) return v.slice(0, 3) + '-' + v.slice(3, 6) + '-' + v.slice(6);
     return v.slice(0, 3) + '-' + v.slice(3, 7) + '-' + v.slice(7);
   }
   function formatCard(v) {
@@ -594,35 +595,171 @@
     return true;
   }
 
+  async function setPaymentCompleted(id, completed) {
+    const record = state.records.find((r) => r.id === id);
+    if (!record) throw new Error('접수 정보를 찾을 수 없습니다.');
+    const updates = {
+      paymentCompleted: completed,
+      paymentCompletedAt: completed ? Date.now() : null,
+      updatedAt: Date.now(),
+    };
+    if (state.fbEnabled) {
+      await fbUpdate(id, updates);
+      Object.assign(record, updates);
+      renderList();
+    } else {
+      Object.assign(record, updates);
+      saveLocalRecords();
+      renderList();
+    }
+  }
+
   // ===== Form =====
   function readForm() {
     const fd = new FormData($('#rentalForm'));
     const data = {};
     fd.forEach((v, k) => { data[k] = v; });
+    if (data.bankName === '__custom__') data.bankName = $('#bankNameCustom')?.value.trim() || '';
     return data;
   }
 
-  function validateForm(data) {
-    const errors = [];
-    if (!data.managerName?.trim()) errors.push('담당자를 선택하세요.');
-    if (!data.customerName?.trim()) errors.push('성함을 입력하세요.');
-    if (!data.customerPhone?.trim()) errors.push('핸드폰 번호를 입력하세요.');
-    else if (data.customerPhone.replace(/\D/g, '').length < 10) errors.push('정확한 핸드폰 번호를 입력하세요.');
-    if (!data.birthDate) errors.push('생년월일을 입력하세요.');
-    if (!data.gender) errors.push('성별을 선택하세요.');
-    if (!data.installAddress?.trim()) errors.push('설치 주소를 입력하세요.');
-    if (!data.payMethod) errors.push('결제 방식을 선택하세요.');
-    if (data.payMethod === '계좌이체') {
-      if (!data.bankName) errors.push('은행명을 선택하세요.');
-      if (!data.accountHolder?.trim()) errors.push('예금주를 입력하세요.');
-      if (!data.accountNumber?.trim()) errors.push('계좌번호를 입력하세요.');
-    } else if (data.payMethod === '신용카드') {
-      if (!data.cardCompany) errors.push('카드사를 선택하세요.');
-      if (!data.cardHolder?.trim()) errors.push('카드소유주를 입력하세요.');
-      if (!data.cardNumber?.trim()) errors.push('카드번호를 입력하세요.');
-      else if (data.cardNumber.replace(/\D/g, '').length !== 16) errors.push('카드번호 16자리를 모두 입력하세요.');
-      if (!data.cardExpiry) errors.push('카드 유효기간을 선택하세요.');
+  const receptionFieldLabels = {
+    managerName: '담당자', customerName: '성함', customerPhone: '핸드폰 번호',
+    birthDate: '생년월일', installAddress: '설치 주소', bankName: '은행명', bankNameCustom: '은행명',
+    accountHolder: '예금주', accountNumber: '계좌번호', cardCompany: '카드사',
+    cardHolder: '카드소유주', cardNumber: '카드번호', cardExpiry: '카드 유효기간'
+  };
+
+  function isValidBirthDate(value) {
+    if (!/^\d{8}$/.test(value)) return false;
+    const year = Number(value.slice(0, 4));
+    const month = Number(value.slice(4, 6));
+    const day = Number(value.slice(6, 8));
+    const date = new Date(year, month - 1, day);
+    const today = new Date();
+    return year >= 1900 && date.getFullYear() === year && date.getMonth() === month - 1 &&
+      date.getDate() === day && date <= today;
+  }
+
+  function isValidCardNumber(value) {
+    const digits = value.replace(/\D/g, '');
+    if (!/^\d{16}$/.test(digits)) return false;
+    let sum = 0;
+    for (let i = 0; i < digits.length; i += 1) {
+      let n = Number(digits[digits.length - 1 - i]);
+      if (i % 2 === 1) n = n > 4 ? n * 2 - 9 : n * 2;
+      sum += n;
     }
+    return sum % 10 === 0;
+  }
+
+  function getReceptionFieldError(id, value, showRequired = false, allowPartial = false) {
+    const trimmed = String(value || '').trim();
+    if (!trimmed) return showRequired ? `${receptionFieldLabels[id]}을(를) 입력하거나 선택하세요.` : '';
+    const digits = trimmed.replace(/\D/g, '');
+    const phoneMinLength = digits.startsWith('010') ? 11 : 10;
+    if (allowPartial && ((id === 'customerPhone' && digits.length < phoneMinLength) ||
+        (id === 'birthDate' && digits.length < 8) ||
+        (id === 'accountNumber' && digits.length < 10) ||
+        (id === 'cardNumber' && digits.length < 16) ||
+        (id === 'installAddress' && trimmed.length < 5))) return '';
+    if (id === 'customerPhone' && !/^(?:010-?\d{4}-?\d{4}|01[16789]-?\d{3,4}-?\d{4})$/.test(trimmed)) {
+      return '핸드폰 번호를 010-0000-0000 형식으로 입력하세요.';
+    }
+    if (id === 'birthDate' && !isValidBirthDate(trimmed)) {
+      return '생년월일을 실제 날짜인 8자리 숫자(예: 19800101)로 입력하세요.';
+    }
+    if (id === 'installAddress' && trimmed.length < 5) {
+      return '설치 주소를 상세 주소까지 5자 이상 입력하세요.';
+    }
+    if (id === 'accountNumber' && !/^\d{10,16}$/.test(trimmed)) {
+      return '계좌번호는 하이픈 없이 10~16자리 숫자로 입력하세요.';
+    }
+    if (id === 'cardNumber' && !isValidCardNumber(trimmed)) {
+      return '유효한 16자리 카드번호를 입력하세요.';
+    }
+    if (id === 'cardExpiry') {
+      const match = /^(\d{4})-(\d{2})$/.exec(trimmed);
+      const thisMonth = new Date();
+      if (!match || Number(match[2]) < 1 || Number(match[2]) > 12 ||
+          Number(match[1]) < thisMonth.getFullYear() ||
+          (Number(match[1]) === thisMonth.getFullYear() && Number(match[2]) < thisMonth.getMonth() + 1)) {
+        return '유효기간은 이번 달 이후로 선택하세요.';
+      }
+    }
+    if (id === 'cardHolder' && trimmed !== $('#customerName')?.value.trim()) {
+      return '카드소유주는 고객명과 동일해야 합니다.';
+    }
+    return '';
+  }
+
+  function setReceptionFieldValidation(id, showRequired = false, allowPartial = false) {
+    const field = $(`#${id}`);
+    if (!field) return '';
+    const message = getReceptionFieldError(id, field.value, showRequired, allowPartial);
+    const group = field.closest('.form-group');
+    if (!group) return message;
+    let help = group.querySelector(`.field-error[data-for="${id}"]`);
+    if (message) {
+      if (!help) {
+        help = document.createElement('p');
+        help.className = 'field-error';
+        help.dataset.for = id;
+        help.setAttribute('role', 'alert');
+        group.appendChild(help);
+      }
+      help.textContent = message;
+      field.classList.add('field-invalid');
+      field.setAttribute('aria-invalid', 'true');
+    } else {
+      help?.remove();
+      field.classList.remove('field-invalid');
+      field.removeAttribute('aria-invalid');
+    }
+    return message;
+  }
+
+  function validateReceptionFields(showRequired = false) {
+    const ids = ['managerName', 'customerName', 'customerPhone', 'birthDate', 'installAddress'];
+    const payMethod = document.querySelector('input[name="payMethod"]:checked')?.value;
+    if (payMethod === '계좌이체') ids.push($('#bankName')?.value === '__custom__' ? 'bankNameCustom' : 'bankName', 'accountNumber');
+    if (payMethod === '신용카드') ids.push('cardCompany', 'cardNumber', 'cardExpiry');
+    return ids.map((id) => setReceptionFieldValidation(id, showRequired)).filter(Boolean);
+  }
+
+  function clearReceptionFieldValidation() {
+    Object.keys(receptionFieldLabels).forEach((id) => {
+      const field = $(`#${id}`);
+      field?.classList.remove('field-invalid');
+      field?.removeAttribute('aria-invalid');
+    });
+    $$('.field-error[data-for]').forEach((el) => el.remove());
+  }
+
+  function syncLinkedHolderNames() {
+    const name = $('#customerName')?.value.trim() || '';
+    ['accountHolder', 'cardHolder'].forEach((id) => {
+      const input = $(`#${id}`);
+      const display = $(`#${id}Display`);
+      if (input) input.value = name;
+      if (display) {
+        display.textContent = name || '고객명 입력 시 자동 표시됩니다.';
+        display.classList.toggle('is-empty', !name);
+      }
+    });
+  }
+
+  function validateForm(data) {
+    const errors = validateReceptionFields(true);
+    if (!data.gender) errors.push('성별을 선택하세요.');
+    if (!data.payMethod) errors.push('결제 방식을 선택하세요.');
+    if (data.payMethod === '계좌이체' && data.accountHolder !== data.customerName?.trim()) {
+      errors.push('예금주는 고객명과 동일해야 합니다.');
+    }
+    if (data.payMethod === '신용카드' && data.cardHolder !== data.customerName?.trim()) {
+      errors.push('카드소유주는 고객명과 동일해야 합니다.');
+    }
+    if (data.telecom === '알뜰폰') errors.push('알뜰폰은 통신망(SKT·KT·LGU+)도 함께 선택하세요.');
     // 제품: productsJson 우선, 없으면 productName 폴백
     const cartProducts = data.productsJson ? (() => { try { return JSON.parse(data.productsJson); } catch { return []; } })() : [];
     if (cartProducts.length === 0 && !data.productName?.trim()) errors.push('제품을 1개 이상 추가하세요.');
@@ -639,21 +776,7 @@
 
     // 성함 입력 시 예금주/카드소유주 자동 입력
     $('#customerName').addEventListener('input', (e) => {
-      const name = e.target.value;
-      const holder = $('#accountHolder');
-      const cardHolder = $('#cardHolder');
-      // 성함 변경 시 항상 덮어씀 (수동 플래그 초기화)
-      if (holder) { holder.value = name; holder.dataset.manualEdit = ''; }
-      if (cardHolder) { cardHolder.value = name; cardHolder.dataset.manualEdit = ''; }
-    });
-    // 수동 입력 시 자동입력 중단 플래그
-    $('#accountHolder').addEventListener('input', (e) => {
-      const customerName = $('#customerName').value;
-      e.target.dataset.manualEdit = e.target.value !== customerName ? '1' : '';
-    });
-    $('#cardHolder').addEventListener('input', (e) => {
-      const customerName = $('#customerName').value;
-      e.target.dataset.manualEdit = e.target.value !== customerName ? '1' : '';
+      syncLinkedHolderNames();
     });
 
     // 통신사 라디오 + 알뜰폰 체크박스 연동
@@ -682,6 +805,28 @@
     });
     $('#telecomMvno')?.addEventListener('change', updateTelecomValue);
 
+    function updateBankNameInput() {
+      const isCustom = $('#bankName').value === '__custom__';
+      const customGroup = $('#bankNameCustomGroup');
+      const customInput = $('#bankNameCustom');
+      customGroup.style.display = isCustom ? 'block' : 'none';
+      customInput.required = isCustom;
+      if (isCustom) {
+        requestAnimationFrame(() => customInput.focus());
+      } else {
+        customInput.value = '';
+      }
+    }
+    $('#bankName').addEventListener('change', updateBankNameInput);
+
+    Object.keys(receptionFieldLabels).forEach((id) => {
+      const field = $(`#${id}`);
+      if (!field) return;
+      field.addEventListener('input', () => setReceptionFieldValidation(id, false, true));
+      field.addEventListener('change', () => setReceptionFieldValidation(id));
+      field.addEventListener('blur', () => setReceptionFieldValidation(id));
+    });
+
     $$('input[name="payMethod"]').forEach((radio) => {
       radio.addEventListener('change', (e) => {
         const val = e.target.value;
@@ -694,11 +839,17 @@
           ['cardCompany','cardHolder','cardNumber','cardExpiry'].forEach((id) => $(`#${id}`).setAttribute('required','required'));
           ['bankName','accountHolder','accountNumber'].forEach((id) => $(`#${id}`).removeAttribute('required'));
         }
+        updateBankNameInput();
+        syncLinkedHolderNames();
+        clearReceptionFieldValidation();
       });
     });
     $('#resetBtn').addEventListener('click', () => {
       if (!confirm('입력된 내용을 모두 초기화할까요?')) return;
       $('#rentalForm').reset();
+      clearReceptionFieldValidation();
+      syncLinkedHolderNames();
+      updateBankNameInput();
       $('#accountFields').style.display = 'none';
       $('#cardFields').style.display = 'none';
       if ($('#telecomValue')) $('#telecomValue').value = '';
@@ -718,6 +869,7 @@
     $('#rentalForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       hideFormMsg();
+      syncLinkedHolderNames();
       const data = readForm();
       const errors = validateForm(data);
       if (errors.length > 0) {
@@ -731,6 +883,9 @@
       try {
         const rec = await saveRecord(data);
         $('#rentalForm').reset();
+        clearReceptionFieldValidation();
+        syncLinkedHolderNames();
+        updateBankNameInput();
         $('#accountFields').style.display = 'none';
         $('#cardFields').style.display = 'none';
         if ($('#telecomValue')) $('#telecomValue').value = '';
@@ -910,13 +1065,18 @@
     container.innerHTML = list.map((r) => {
       const fee = r.rentalFee ? formatFee(r.rentalFee) : '-';
       return `
-        <div class="record-card" data-id="${r.id}">
+        <div class="record-card${r.paymentCompleted ? ' payment-completed' : ''}" data-id="${r.id}">
           <div class="record-head">
             <div>
               <span class="record-title">${escapeHtml(r.customerName)} · ${escapeHtml(r.customerPhone)}</span>
               ${r.managerName ? `<span class="badge badge-manager">👤 ${escapeHtml(r.managerName)}</span>` : ''}
             </div>
-            <span class="record-date">${formatDate(r.createdAt)}</span>
+            <div class="record-head-actions">
+              <span class="record-date">${formatDate(r.createdAt)}</span>
+              <button type="button" class="payment-complete-btn${r.paymentCompleted ? ' completed' : ''}" data-action="payment-complete" aria-pressed="${r.paymentCompleted ? 'true' : 'false'}">
+                ${r.paymentCompleted ? '완료 취소' : '입금완료'}
+              </button>
+            </div>
           </div>
           <div class="record-meta">
             ${(() => {
@@ -930,6 +1090,7 @@
             })()}
             <div><span>주소</span>${escapeHtml(r.installAddress || '')}</div>
           </div>
+          ${r.paymentCompleted ? '<div class="payment-complete-stamp" aria-label="입금완료">입금완료</div>' : ''}
         </div>`;
     }).join('');
   }
@@ -1549,10 +1710,9 @@
       if (!currentCartItem) return;
       const note = ($('#productNote')?.value || '').trim();
       const item = { ...currentCartItem };
-      // 프로모션+수동비고 합치기
-      if (note) item.note = note;
-      else if (item.promo) item.note = item.promo;
-      else item.note = '';
+      // 자동 기입된 프로모션을 사용자가 지우면, 해당 제품에서는 프로모션도 제거한다.
+      item.note = note;
+      if (!note) item.promo = '';
       productCart.push(item);
       renderCartItems();
 
@@ -2070,9 +2230,32 @@
       state.managerFilter = e.target.value;
       renderList();
     });
-    $('#listContainer').addEventListener('click', (e) => {
+    $('#listContainer').addEventListener('click', async (e) => {
       const card = e.target.closest('.record-card');
       if (!card) return;
+      const paymentBtn = e.target.closest('[data-action="payment-complete"]');
+      if (paymentBtn) {
+        e.stopPropagation();
+        const record = state.records.find((r) => r.id === card.dataset.id);
+        if (!record) return;
+        const completed = !record.paymentCompleted;
+        const pw = prompt(completed ? '입금완료 처리 비밀번호를 입력하세요.' : '입금완료 취소 비밀번호를 입력하세요.');
+        if (pw === null) return;
+        if (pw !== SETTINGS_PW) {
+          showToast('비밀번호가 틀렸습니다.', 'error');
+          return;
+        }
+        if (!completed && !confirm('입금완료 처리를 취소할까요?')) return;
+        paymentBtn.disabled = true;
+        try {
+          await setPaymentCompleted(record.id, completed);
+          showToast(completed ? '입금완료 처리되었습니다.' : '입금완료가 취소되었습니다.', 'success');
+        } catch (err) {
+          paymentBtn.disabled = false;
+          showToast('입금 상태 변경 실패: ' + (err.message || err), 'error');
+        }
+        return;
+      }
       openDetail(card.dataset.id);
     });
   }

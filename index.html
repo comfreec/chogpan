@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>코웨이 렌탈 접수 관리</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
-<link rel="stylesheet" href="styles.css?v=20260873">
+<link rel="stylesheet" href="styles.css?v=20261009">
 </head>
 <body>
 
@@ -27,7 +27,7 @@
       <p>아래 모든 정보는 반드시 <u>한 사람 명의</u>로 일치하여야 합니다.</p>
     </div>
 
-    <form id="rentalForm" class="form-card">
+    <form id="rentalForm" class="form-card" novalidate>
 
       <fieldset class="form-section">
         <legend>고객 정보</legend>
@@ -108,12 +108,17 @@
                 <option>카카오뱅크</option><option>케이뱅크</option><option>토스뱅크</option>
                 <option>부산은행</option><option>대구은행</option><option>경남은행</option>
                 <option>전북은행</option><option>제주은행</option><option>SC제일은행</option>
-                <option>씨티은행</option>
+                <option value="__custom__">직접 입력</option>
               </select>
             </div>
             <div class="form-group">
               <label for="accountHolder">예금주 <span class="req">*</span></label>
-              <input type="text" id="accountHolder" name="accountHolder" placeholder="홍길동">
+              <p class="linked-name-display is-empty" id="accountHolderDisplay">고객명 입력 시 자동 표시됩니다.</p>
+              <input type="hidden" id="accountHolder" name="accountHolder">
+            </div>
+            <div class="form-group" id="bankNameCustomGroup" style="display:none;">
+              <label for="bankNameCustom">은행명 직접 입력 <span class="req">*</span></label>
+              <input type="text" id="bankNameCustom" placeholder="은행명을 입력하세요." autocomplete="off">
             </div>
           </div>
           <div class="form-group">
@@ -136,7 +141,8 @@
             </div>
             <div class="form-group">
               <label for="cardHolder">카드소유주 <span class="req">*</span></label>
-              <input type="text" id="cardHolder" name="cardHolder" placeholder="홍길동">
+              <p class="linked-name-display is-empty" id="cardHolderDisplay">고객명 입력 시 자동 표시됩니다.</p>
+              <input type="hidden" id="cardHolder" name="cardHolder">
             </div>
           </div>
           <div class="form-row">
@@ -504,6 +510,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="products-data.js?v=20260871"></script>
-<script src="app.js?v=20260873"></script>
+<script src="app.js?v=20261010"></script>
 </body>
 </html>

@@ -1341,3 +1341,327 @@ body {
   border-color: #7892cc;
   box-shadow: 0 0 0 3px rgba(49,95,203,.1);
 }
+
+/* ===== Reception form: refined field definition ===== */
+#tab-form .form-card {
+  border-color: #b8c4d5;
+  box-shadow: 0 18px 44px rgba(20,31,52,.075), 0 1px 2px rgba(20,31,52,.04);
+}
+
+#tab-form .form-section {
+  position: relative;
+  background: linear-gradient(180deg, #fdfdfe 0%, #f8f9fb 100%);
+  border-color: #b9c5d6;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 4px 14px rgba(20,31,52,.025);
+}
+
+#tab-form .form-section:focus-within {
+  border-color: #6f89bd;
+  box-shadow: 0 0 0 3px rgba(49,95,203,.11), 0 10px 26px rgba(20,31,52,.06);
+}
+
+#tab-form .form-section legend {
+  color: #203a69;
+  background: #fff;
+  border: 1px solid #b8c5d8;
+  border-radius: 999px;
+  padding: 4px 12px;
+  box-shadow: 0 2px 7px rgba(20,31,52,.045);
+}
+
+#tab-form .form-group label {
+  color: #34425a;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+#tab-form .form-group input[type="text"],
+#tab-form .form-group input[type="tel"],
+#tab-form .form-group input[type="date"],
+#tab-form .form-group input[type="number"],
+#tab-form .form-group input[type="month"],
+#tab-form .form-group input[type="password"],
+#tab-form .form-group input[type="search"],
+#tab-form .form-group select,
+#tab-form .form-group textarea,
+#tab-form .product-search-wrap input {
+  min-height: 46px;
+  border-color: #96a6bd;
+  border-width: 2px;
+  border-radius: 11px;
+  background-color: #fff;
+  box-shadow: inset 0 1px 2px rgba(20,31,52,.035), 0 1px 0 rgba(255,255,255,.9);
+}
+
+#tab-form .form-group input:hover,
+#tab-form .form-group select:hover,
+#tab-form .form-group textarea:hover,
+#tab-form .product-search-wrap input:hover {
+  border-color: #687d9e;
+}
+
+#tab-form .form-group input:focus,
+#tab-form .form-group select:focus,
+#tab-form .form-group textarea:focus,
+#tab-form .product-search-wrap input:focus {
+  border-color: #2457c2;
+  background-color: #fff;
+  box-shadow: 0 0 0 4px rgba(49,95,203,.12), 0 5px 14px rgba(49,95,203,.08);
+}
+
+#tab-form .form-group input.field-invalid,
+#tab-form .form-group select.field-invalid {
+  border-color: #c2414d;
+  background-color: #fffafb;
+  box-shadow: 0 0 0 3px rgba(194,65,77,.1);
+}
+
+#tab-form .form-group input.field-invalid:focus,
+#tab-form .form-group select.field-invalid:focus {
+  border-color: #ad2f3b;
+  box-shadow: 0 0 0 4px rgba(194,65,77,.14), 0 5px 14px rgba(194,65,77,.07);
+}
+
+#tab-form .linked-name-display {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  color: #263d67;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -.015em;
+}
+
+#tab-form .linked-name-display.is-empty {
+  color: #8d98a9;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+#tab-form #bankNameCustomGroup {
+  grid-column: 1 / -1;
+}
+
+#tab-form .field-error {
+  margin-top: 6px;
+  color: #b22f3b;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+#tab-form .form-group input::placeholder,
+#tab-form .product-search-wrap input::placeholder {
+  color: #8d98a9;
+  opacity: 1;
+}
+
+#tab-form .radio-item {
+  min-height: 42px;
+  border-color: #96a6bd;
+  box-shadow: 0 1px 2px rgba(20,31,52,.025);
+}
+
+#tab-form .radio-item:has(input:checked) {
+  border-color: #5578c4;
+  box-shadow: 0 0 0 3px rgba(49,95,203,.08), inset 0 0 0 1px rgba(49,95,203,.08);
+}
+
+#tab-form .req {
+  display: inline-block;
+  color: #b83e49;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  #tab-form .form-group input[type="text"],
+  #tab-form .form-group input[type="tel"],
+  #tab-form .form-group input[type="date"],
+  #tab-form .form-group input[type="number"],
+  #tab-form .form-group input[type="month"],
+  #tab-form .form-group select,
+  #tab-form .product-search-wrap input {
+    min-height: 48px;
+  }
+}
+
+/* ===== Shared refinement for list, data, and settings tabs ===== */
+#tab-list .list-header,
+#tab-db .db-table-header,
+#tab-settings .form-card > h2 {
+  position: relative;
+}
+
+#tab-list .list-header h2,
+#tab-db .db-table-header h2,
+#tab-settings .form-card > h2 {
+  color: #1e3158;
+  font-weight: 760;
+}
+
+#tab-list .list-tools input[type="search"],
+#tab-list .list-tools select,
+#tab-db .db-search-tools input[type="search"],
+#tab-db .db-search-tools select,
+#tab-settings .manager-add-row input {
+  min-height: 42px;
+  border-color: #96a6bd;
+  border-width: 2px;
+  border-radius: 10px;
+  box-shadow: inset 0 1px 2px rgba(20,31,52,.03), 0 1px 0 rgba(255,255,255,.85);
+}
+
+#tab-list .list-tools input[type="search"]:focus,
+#tab-list .list-tools select:focus,
+#tab-db .db-search-tools input[type="search"]:focus,
+#tab-db .db-search-tools select:focus,
+#tab-settings .manager-add-row input:focus {
+  border-color: #315fcb;
+  box-shadow: 0 0 0 4px rgba(49,95,203,.1), 0 4px 12px rgba(49,95,203,.06);
+}
+
+#tab-list .record-card {
+  border-color: #bac5d5;
+  background: linear-gradient(135deg, #fff 0%, #fbfcfe 100%);
+  box-shadow: 0 5px 16px rgba(20,31,52,.055), inset 0 1px 0 #fff;
+}
+
+#tab-list .record-card:hover {
+  border-color: #7288ad;
+  box-shadow: 0 14px 28px rgba(20,31,52,.11), inset 0 1px 0 #fff;
+}
+
+#tab-db .stat-card {
+  min-height: 104px;
+  border-color: #bac6d7;
+  background: linear-gradient(145deg, #fff 0%, #f4f7fb 100%);
+  box-shadow: 0 5px 15px rgba(20,31,52,.045), inset 0 1px 0 #fff;
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+#tab-db .stat-card:hover {
+  transform: translateY(-2px);
+  border-color: #aebddd;
+  box-shadow: 0 12px 24px rgba(20,31,52,.09), inset 0 1px 0 #fff;
+}
+
+#tab-db .table-wrap {
+  border-color: #b4c1d3;
+  box-shadow: 0 5px 16px rgba(20,31,52,.045);
+}
+
+#tab-db .db-table thead {
+  background: linear-gradient(135deg, #edf2fa 0%, #f7f9fc 100%);
+}
+
+#tab-db .db-table th {
+  color: #3d4d66;
+  font-weight: 750;
+}
+
+#tab-db .db-table tbody tr {
+  transition: background .15s ease, box-shadow .15s ease;
+}
+
+#tab-db .db-table tbody tr:hover {
+  background: #f2f6fc;
+  box-shadow: inset 3px 0 0 #5275bd;
+}
+
+#tab-settings .form-card {
+  border-color: #b8c5d6;
+  box-shadow: 0 10px 25px rgba(20,31,52,.055), inset 0 1px 0 #fff;
+}
+
+#tab-settings .manager-list,
+#tab-settings .payreq-item,
+#tab-settings .payreq-add-form {
+  border-color: #b5c2d4;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+}
+
+#tab-settings .manager-item,
+#tab-settings .payreq-item {
+  transition: background .16s ease, transform .16s ease, border-color .16s ease;
+}
+
+#tab-settings .manager-item:hover,
+#tab-settings .payreq-item:hover {
+  background: #f3f6fb;
+}
+
+#tab-settings .payreq-item:hover {
+  border-color: #aebddd;
+  transform: translateY(-1px);
+}
+
+#tab-list .empty-msg,
+#tab-settings .manager-empty {
+  color: #718096;
+  background: linear-gradient(145deg, #fff, #f8fafc);
+}
+
+/* ===== 목록 입금완료 처리 ===== */
+.record-head-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  position: relative;
+  z-index: 2;
+}
+.payment-complete-btn {
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 1px solid #99a8bd;
+  border-radius: 8px;
+  color: #44536a;
+  background: #fff;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .16s ease;
+}
+.payment-complete-btn:hover {
+  color: #176345;
+  border-color: #66a68b;
+  background: #f1faf6;
+}
+.payment-complete-btn.completed {
+  color: #477161;
+  border-color: #b5d3c5;
+  background: #f1f8f5;
+}
+.payment-complete-btn:disabled { opacity: .55; cursor: wait; }
+.record-card.payment-completed {
+  border-color: #8ebba7 !important;
+  background: linear-gradient(135deg, #fff 0%, #f4faf7 100%) !important;
+}
+.record-card.payment-completed::before {
+  background: linear-gradient(180deg, #2b8a62, #176345);
+}
+.payment-complete-stamp {
+  position: absolute;
+  right: 24px;
+  bottom: 17px;
+  z-index: 1;
+  padding: 5px 12px 4px;
+  border: 3px double rgba(28, 126, 86, .72);
+  border-radius: 6px;
+  color: rgba(22, 111, 76, .78);
+  background: rgba(244, 250, 247, .78);
+  font-size: 15px;
+  font-weight: 850;
+  letter-spacing: .12em;
+  line-height: 1;
+  transform: rotate(-7deg);
+  pointer-events: none;
+}
+.record-card.payment-completed .record-meta { padding-right: 118px; }
+
+@media (max-width: 640px) {
+  .record-head-actions { width: 100%; justify-content: space-between; }
+  .payment-complete-stamp { right: 17px; bottom: 15px; font-size: 13px; }
+  .record-card.payment-completed .record-meta { padding-right: 96px; }
+}

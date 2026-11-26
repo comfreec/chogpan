@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>코웨이 렌탈 접수 관리</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
-<link rel="stylesheet" href="styles.css?v=20261126">
+<link rel="stylesheet" href="styles.css?v=20261128">
 </head>
 <body>
 
@@ -411,10 +411,32 @@
     <div class="modal-footer">
       <button class="btn btn-outline" id="copyAllBtn">전체 복사</button>
       <button class="btn btn-kakao" id="sendKakaoBtn">카톡 공유</button>
+      <button class="btn btn-outline" id="customerMessageBtn">💬 고객 문자 안내</button>
       <button class="btn btn-outline" id="payRequestBtn">💰 입금요청</button>
       <button class="btn btn-primary" id="editRecordBtn">✏️ 수정</button>
       <button class="btn btn-danger" id="deleteRecordBtn">삭제</button>
       <button class="btn btn-secondary" data-close="true">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 고객 문자 안내 모달 -->
+<div id="customerMessageModal" class="modal" style="display:none;">
+  <div class="modal-overlay" id="customerMessageOverlay"></div>
+  <div class="modal-box customer-message-modal-box">
+    <div class="modal-header">
+      <div>
+        <h3>💬 고객 문자 안내</h3>
+        <p id="customerMessageRecipient" class="message-recipient"></p>
+      </div>
+      <button class="modal-close" id="closeCustomerMessageBtn">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p class="message-guide">아래 순서대로 필요한 시점에 한 문구씩 보내세요.</p>
+      <div id="customerMessageList" class="customer-message-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" id="closeCustomerMessageFooterBtn">닫기</button>
     </div>
   </div>
 </div>
@@ -522,6 +544,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script src="products-data.js?v=20260871"></script>
-<script src="app.js?v=20261127"></script>
+<script src="app.js?v=20261128"></script>
 </body>
 </html>

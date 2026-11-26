@@ -1719,3 +1719,62 @@ body {
   .payment-complete-stamp { right: 17px; bottom: 15px; font-size: 13px; }
   .record-card.payment-completed .record-meta { padding-right: 96px; }
 }
+
+/* ===== 고객 단계별 문자 안내 ===== */
+.customer-message-modal-box { max-width: 650px; }
+.message-recipient {
+  margin-top: 3px;
+  color: rgba(255,255,255,.72);
+  font-size: 12px;
+}
+.message-guide {
+  margin-bottom: 15px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+.customer-message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.customer-message-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: linear-gradient(145deg, #fff, #f7f9fc);
+}
+.customer-message-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--navy);
+  font-size: 13px;
+  font-weight: 800;
+}
+.customer-message-content { min-width: 0; flex: 1; }
+.customer-message-content > strong { color: var(--navy); font-size: 13px; }
+.customer-message-text {
+  margin: 8px 0 12px;
+  padding: 12px 14px;
+  border-radius: 9px;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid #e2e7ef;
+  font-size: 13px;
+  line-height: 1.75;
+}
+.customer-message-send { min-height: 36px; padding: 7px 14px; font-size: 12px; }
+
+@media (max-width: 640px) {
+  .customer-message-item { padding: 13px; gap: 9px; }
+  .customer-message-text { padding: 10px 11px; }
+  .customer-message-send { width: 100%; }
+}

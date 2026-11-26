@@ -1149,6 +1149,68 @@
     return ok;
   }
 
+  const CUSTOMER_MESSAGE_STEPS = [
+    {
+      title: '접수 직후',
+      text: '접수해드렸습니다~\n조금후 핸드폰본인인증 문자오면 인증부탁드립니다~\n인증후 전자계약서 오면 싸인 부탁드립니다~^^',
+    },
+    {
+      title: '전자계약서 발송 시',
+      text: '전자계약서 보내드리겠습니다~\n싸인 부탁드립니다~',
+    },
+    {
+      title: '제품 설치 후',
+      text: '고객님~\n제품 설치 후 사진 찍어 보내주시면 다음 날까지 입금해드리겠습니다~^^',
+    },
+  ];
+
+  function renderCustomerMessages() {
+    const list = $('#customerMessageList');
+    if (!list) return;
+    list.innerHTML = CUSTOMER_MESSAGE_STEPS.map((step, index) => `
+      <div class="customer-message-item">
+        <div class="customer-message-step">${index + 1}</div>
+        <div class="customer-message-content">
+          <strong>${escapeHtml(step.title)}</strong>
+          <div class="customer-message-text">${escapeHtml(step.text).replace(/\n/g, '<br>')}</div>
+          <button type="button" class="btn btn-primary customer-message-send" data-message-step="${index}">문자로 보내기</button>
+        </div>
+      </div>`).join('');
+  }
+
+  function openCustomerMessages() {
+    if (!state.currentDetail) return;
+    const recipient = $('#customerMessageRecipient');
+    if (recipient) recipient.textContent = `${state.currentDetail.customerName || '고객'} · ${state.currentDetail.customerPhone || '전화번호 없음'}`;
+    renderCustomerMessages();
+    $('#customerMessageModal').style.display = 'flex';
+  }
+
+  function closeCustomerMessages() {
+    $('#customerMessageModal').style.display = 'none';
+  }
+
+  async function sendCustomerMessage(stepIndex) {
+    const record = state.currentDetail;
+    const step = CUSTOMER_MESSAGE_STEPS[stepIndex];
+    if (!record || !step) return;
+    const phone = String(record.customerPhone || '').replace(/\D/g, '');
+    if (!phone) {
+      showToast('고객 핸드폰 번호가 없습니다.', 'error');
+      return;
+    }
+    const isAppleMobile = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const isMobile = isAppleMobile || /Android/i.test(navigator.userAgent);
+    if (isMobile) {
+      const separator = isAppleMobile ? '&' : '?';
+      window.location.href = `sms:${phone}${separator}body=${encodeURIComponent(step.text)}`;
+      showToast(`${stepIndex + 1}단계 문자 앱을 열었습니다.`, 'success');
+      return;
+    }
+    const copied = await copyToClipboard(step.text);
+    showToast(copied ? `${stepIndex + 1}단계 문구가 복사되었습니다.` : '문구 복사에 실패했습니다.', copied ? 'success' : 'error');
+  }
+
   // ===== List Rendering =====
   function renderList() {
     const container = $('#listContainer');
@@ -2408,7 +2470,12 @@
   function bindModal() {
     $$('[data-close]').forEach((el) => el.addEventListener('click', closeDetail));
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && $('#detailModal').style.display === 'flex') closeDetail();
+      if (e.key !== 'Escape') return;
+      if ($('#customerMessageModal').style.display === 'flex') {
+        closeCustomerMessages();
+        return;
+      }
+      if ($('#detailModal').style.display === 'flex') closeDetail();
     });
     $('#copyAllBtn').addEventListener('click', async () => {
       if (!state.currentDetail) return;
@@ -2418,6 +2485,15 @@
     $('#sendKakaoBtn').addEventListener('click', async () => {
       if (!state.currentDetail) return;
       await shareViaKakao(buildKakaoText(state.currentDetail, { includeSensitive: true }));
+    });
+    $('#customerMessageBtn')?.addEventListener('click', openCustomerMessages);
+    $('#closeCustomerMessageBtn')?.addEventListener('click', closeCustomerMessages);
+    $('#closeCustomerMessageFooterBtn')?.addEventListener('click', closeCustomerMessages);
+    $('#customerMessageOverlay')?.addEventListener('click', closeCustomerMessages);
+    $('#customerMessageList')?.addEventListener('click', async (e) => {
+      const button = e.target.closest('[data-message-step]');
+      if (!button) return;
+      await sendCustomerMessage(Number(button.dataset.messageStep));
     });
     $('#payRequestBtn').addEventListener('click', async () => {
       if (!state.currentDetail) return;

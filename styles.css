@@ -1601,6 +1601,60 @@ body {
   background: linear-gradient(145deg, #fff, #f8fafc);
 }
 
+/* ===== 접수 내용 붙여넣기 ===== */
+.paste-reception-card {
+  margin-bottom: 18px;
+  padding: 20px;
+  border: 1px solid #cbd5e3;
+  border-radius: 16px;
+  background: linear-gradient(145deg, #fff 0%, #f6f8fc 100%);
+  box-shadow: 0 8px 24px rgba(20,31,52,.06);
+}
+.paste-reception-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.paste-reception-head strong { display: block; color: var(--navy); font-size: 15px; }
+.paste-reception-head p { margin-top: 3px; color: var(--ink-soft); font-size: 12px; }
+.paste-reception-card textarea {
+  width: 100%;
+  min-height: 150px;
+  padding: 14px 16px;
+  resize: vertical;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--ink);
+  background: #fff;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.65;
+  transition: border-color .16s, box-shadow .16s;
+}
+.paste-reception-card textarea:focus {
+  outline: none;
+  border-color: #7892cc;
+  box-shadow: 0 0 0 3px rgba(49,95,203,.1);
+}
+.paste-reception-card textarea::placeholder { color: #a5adba; }
+.paste-reception-result {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.paste-reception-result.success { color: #226047; background: #edf8f3; border: 1px solid #b9ddce; }
+.paste-reception-result.error { color: #963f47; background: #fff3f3; border: 1px solid #edc5c8; }
+
+@media (max-width: 640px) {
+  .paste-reception-card { padding: 15px 13px; border-radius: 14px; }
+  .paste-reception-head { align-items: flex-start; }
+  .paste-reception-head .btn { min-width: 88px; }
+}
+
 /* ===== 목록 입금완료 처리 ===== */
 .record-head-actions {
   display: flex;

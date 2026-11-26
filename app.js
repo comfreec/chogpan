@@ -13,6 +13,7 @@
 
   const STORAGE_KEY = 'chogpan_records_v2';
   const MANAGERS_KEY = 'chogpan_managers';
+  let pastedInstallNote = '';
 
   // ===== 담당자별 입금요청 정보 (Firestore 기반) =====
   // state.paymentInfos = [{ id, managerName, phone, ssn, bank, account }, ...]
@@ -616,6 +617,11 @@
 
   // ===== Form =====
   function readForm() {
+    const pastedData = extractReceptionPaste($('#receptionPasteText')?.value || '');
+    if (pastedData.installDate) {
+      pastedInstallNote = `설치 희망일: ${pastedData.installDate}`;
+      syncOtherDiscount();
+    }
     const fd = new FormData($('#rentalForm'));
     const data = {};
     fd.forEach((v, k) => { data[k] = v; });
@@ -749,6 +755,129 @@
     });
   }
 
+  function extractReceptionPaste(text) {
+    const definitions = [
+      ['customerName', /^(?:성함|고객명|이름)\s*(?:[ㅡ:：]|-\s*)?\s*(.*)$/i],
+      ['customerPhone', /^(?:핸드폰\s*번호|휴대폰\s*번호|핸드폰|휴대폰|연락처)\s*(?:[ㅡ:：]|-\s*)?\s*(.*)$/i],
+      ['telecom', /^(?:통신사|통신망)\s*(?:[ㅡ:：]|-\s*)?\s*(.*)$/i],
+      ['birthDate', /^(?:생년월일|생일)\s*(?:[ㅡ:：]|-\s*)?\s*(.*)$/i],
+      ['installAddress', /^(?:설치\s*주소|주소)\s*(?:[ㅡ:：]|-\s*)?\s*(.*)$/i],
+      ['payMethod', /^(?:결제\s*방식)(?:\s*\([^)]*\))?\s*(?:[ㅡ:：]|-\s*)?\s*(.*)$/i],
+      ['company', /^(?:은행명?\s*또는\s*카드명|은행명?\s*or\s*카드명|은행명|카드명|카드사)\s*(?:[ㅡ:：]|-\s*)?\s*(.*)$/i],
+      ['paymentNumber', /^(?:계좌\s*또는\s*카드번호|계좌번호\s*or\s*카드번호|계좌\s*번호|카드\s*번호)\s*(?:[ㅡ:：]|-\s*)?\s*(.*)$/i],
+      ['installDate', /^(?:설(?:치|지)\s*원하시는\s*날짜|설(?:치|지)\s*원하는\s*날짜|설(?:치|지)\s*희망일|설(?:치|지)\s*희망\s*날짜|설(?:치|지)\s*날짜)\s*(?:[ㅡ:：]|-\s*)?\s*(.*)$/i],
+    ];
+    const lines = String(text || '').replace(/\r/g, '').split('\n').map((line) => line.trim()).filter(Boolean);
+    const result = {};
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i];
+      if (/본인\s*명의|계약자.*명의/.test(line)) continue;
+      const matched = definitions.find(([, regex]) => regex.test(line));
+      if (!matched) continue;
+      const match = matched[1].exec(line);
+      let value = (match?.[1] || '').trim();
+      if (!value && lines[i + 1] && !definitions.some(([, regex]) => regex.test(lines[i + 1]))) {
+        value = lines[i + 1].trim();
+        i += 1;
+      }
+      if (value) result[matched[0]] = value;
+    }
+    return result;
+  }
+
+  function setReceptionValue(id, value) {
+    const el = $(`#${id}`);
+    if (!el) return;
+    el.value = value;
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function selectMatchingOption(select, rawValue, aliases = {}) {
+    if (!select || !rawValue) return false;
+    const normalized = String(rawValue).replace(/\s/g, '').toLowerCase();
+    const aliasValue = Object.entries(aliases).find(([key]) => normalized.includes(key))?.[1] || '';
+    const option = Array.from(select.options).find((opt) => {
+      const value = opt.value.replace(/\s/g, '').toLowerCase();
+      return value && value !== '__custom__' && (value === normalized || normalized.includes(value) || value.includes(normalized));
+    });
+    const selectedValue = option?.value || aliasValue;
+    if (!selectedValue) return false;
+    select.value = selectedValue;
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+
+  function applyReceptionPaste() {
+    const source = $('#receptionPasteText')?.value.trim() || '';
+    const resultEl = $('#pasteReceptionResult');
+    if (!source) {
+      showToast('붙여넣을 접수 내용을 입력하세요.', 'error');
+      $('#receptionPasteText')?.focus();
+      return;
+    }
+    const data = extractReceptionPaste(source);
+    const filled = [];
+    pastedInstallNote = '';
+    syncOtherDiscount();
+    if (data.customerName) { setReceptionValue('customerName', data.customerName); filled.push('성함'); }
+    if (data.customerPhone) { setReceptionValue('customerPhone', formatPhone(data.customerPhone)); filled.push('핸드폰'); }
+    if (data.birthDate) { setReceptionValue('birthDate', data.birthDate.replace(/\D/g, '').slice(0, 8)); filled.push('생년월일'); }
+    if (data.installAddress) { setReceptionValue('installAddress', data.installAddress); filled.push('설치주소'); }
+
+    if (data.telecom) {
+      const telecom = data.telecom.toUpperCase().replace(/\s/g, '');
+      let carrier = '';
+      if (/SKT|SK텔레콤|에스케이/.test(telecom)) carrier = 'SKT';
+      else if (/LGU?\+?|LG유플러스|유플러스/.test(telecom)) carrier = 'LGU+';
+      else if (/KT|케이티/.test(telecom)) carrier = 'KT';
+      $$('input[name="telecomCarrier"]').forEach((radio) => { radio.checked = radio.value === carrier; });
+      $('#telecomMvno').checked = /알뜰|MVNO/.test(telecom);
+      const trigger = $$('input[name="telecomCarrier"]').find((radio) => radio.checked) || $('#telecomMvno');
+      trigger?.dispatchEvent(new Event('change', { bubbles: true }));
+      filled.push('통신사');
+    }
+
+    const numberDigits = (data.paymentNumber || '').replace(/\D/g, '');
+    const paymentHint = `${data.payMethod || ''} ${data.company || ''}`;
+    const isCard = /카드|신용/.test(paymentHint) || (!data.payMethod && numberDigits.length === 16);
+    const isAccount = /은행|계좌|이체/.test(paymentHint) || (!!numberDigits && !isCard);
+    const payValue = isCard ? '신용카드' : (isAccount ? '계좌이체' : '');
+    if (payValue) {
+      const radio = document.querySelector(`input[name="payMethod"][value="${payValue}"]`);
+      if (radio) { radio.checked = true; radio.dispatchEvent(new Event('change', { bubbles: true })); filled.push('결제방식'); }
+    }
+
+    if (data.company && payValue === '계좌이체') {
+      const bankAliases = { 국민: 'KB국민은행', 농협: 'NH농협은행', 기업: 'IBK기업은행', 신한: '신한은행', 우리: '우리은행', 하나: '하나은행', 카카오: '카카오뱅크', 케이: '케이뱅크', 토스: '토스뱅크' };
+      if (!selectMatchingOption($('#bankName'), data.company, bankAliases)) {
+        $('#bankName').value = '__custom__';
+        $('#bankName').dispatchEvent(new Event('change', { bubbles: true }));
+        setReceptionValue('bankNameCustom', data.company);
+      }
+      filled.push('은행명');
+    } else if (data.company && payValue === '신용카드') {
+      const cardAliases = { 국민: 'KB국민카드', 농협: 'NH농협카드', 기업: 'IBK기업카드', 신한: '신한카드', 삼성: '삼성카드', 현대: '현대카드', 롯데: '롯데카드', 우리: '우리카드', 하나: '하나카드', 씨티: '씨티카드', 카카오: '카카오뱅크카드', 토스: '토스뱅크카드' };
+      if (selectMatchingOption($('#cardCompany'), data.company, cardAliases)) filled.push('카드사');
+    }
+    if (numberDigits && payValue === '계좌이체') { setReceptionValue('accountNumber', numberDigits); filled.push('계좌번호'); }
+    if (numberDigits && payValue === '신용카드') { setReceptionValue('cardNumber', formatCard(numberDigits)); filled.push('카드번호'); }
+
+    if (data.installDate) {
+      pastedInstallNote = `설치 희망일: ${data.installDate}`;
+      syncOtherDiscount();
+      filled.push('설치 희망일→비고');
+    }
+    syncLinkedHolderNames();
+    clearReceptionFieldValidation();
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      resultEl.className = 'paste-reception-result ' + (filled.length ? 'success' : 'error');
+      resultEl.textContent = filled.length ? `자동 입력 완료: ${filled.join(', ')}` : '인식된 항목이 없습니다. 각 줄의 항목명 뒤에 내용을 입력했는지 확인하세요.';
+    }
+    showToast(filled.length ? `${filled.length}개 항목을 자동 입력했습니다.` : '인식된 항목이 없습니다.', filled.length ? 'success' : 'error');
+  }
+
   function validateForm(data) {
     const errors = validateReceptionFields(true);
     if (!data.gender) errors.push('성별을 선택하세요.');
@@ -767,6 +896,10 @@
   }
 
   function bindForm() {
+    $('#parseReceptionBtn')?.addEventListener('click', applyReceptionPaste);
+    $('#receptionPasteText')?.addEventListener('paste', () => {
+      setTimeout(applyReceptionPaste, 0);
+    });
     $('#customerPhone').addEventListener('input', (e) => {
       e.target.value = formatPhone(e.target.value);
     });
@@ -847,6 +980,9 @@
     $('#resetBtn').addEventListener('click', () => {
       if (!confirm('입력된 내용을 모두 초기화할까요?')) return;
       $('#rentalForm').reset();
+      pastedInstallNote = '';
+      if ($('#receptionPasteText')) $('#receptionPasteText').value = '';
+      if ($('#pasteReceptionResult')) $('#pasteReceptionResult').style.display = 'none';
       clearReceptionFieldValidation();
       syncLinkedHolderNames();
       updateBankNameInput();
@@ -883,6 +1019,9 @@
       try {
         const rec = await saveRecord(data);
         $('#rentalForm').reset();
+        pastedInstallNote = '';
+        if ($('#receptionPasteText')) $('#receptionPasteText').value = '';
+        if ($('#pasteReceptionResult')) $('#pasteReceptionResult').style.display = 'none';
         clearReceptionFieldValidation();
         syncLinkedHolderNames();
         updateBankNameInput();
@@ -1559,6 +1698,11 @@
   let productCart = []; // 선택된 제품 목록
   let currentCartItem = null; // 현재 선택 중인 제품
 
+  function syncOtherDiscount() {
+    const notes = productCart.map((p) => p.note || p.promo || '').filter(Boolean);
+    $('#otherDiscount').value = [pastedInstallNote, ...notes].filter(Boolean).join(' / ');
+  }
+
   function buildProductSelect() { updateProductCountInfo(); }
 
   function updateProductCountInfo() {
@@ -1579,6 +1723,7 @@
       $('#manageType').value = '';
       $('#rentalFee').value = '';
       $('#productsJson').value = '';
+      syncOtherDiscount();
       return;
     }
     wrap.style.display = 'block';
@@ -1599,8 +1744,7 @@
     $('#rentalFee').value = first.rentalFee || '';
     $('#productsJson').value = JSON.stringify(productCart);
     // otherDiscount: 제품별 비고를 합산
-    const notes = productCart.map((p) => p.note || p.promo || '').filter(Boolean);
-    $('#otherDiscount').value = notes.join(' / ');
+    syncOtherDiscount();
   }
 
   window._removeCartItem = (i) => {
